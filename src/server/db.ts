@@ -1,9 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 /**
  * Prisma 7 se připojuje přes driver adapter, ne přes URL ve schématu.
- * Vercel/Neon poskytuje DATABASE_URL jako proměnnou prostředí.
+ * Produkce používá Vercel/Neon, lokální demo souborovou SQLite databázi.
  */
 
 function createClient() {
@@ -14,8 +15,12 @@ function createClient() {
       "Chybí proměnná prostředí DATABASE_URL. Zkopírujte .env.example do .env.",
     );
   }
+  const adapter = url.startsWith("file:")
+    ? new PrismaBetterSqlite3({ url })
+    : new PrismaPg({ connectionString: url });
+
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString: url }),
+    adapter,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 }

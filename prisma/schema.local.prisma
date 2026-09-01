@@ -1,0 +1,348 @@
+// Fitness coaching platform — databázové schéma
+//
+// Lokální demonstrační databáze. Běží přímo ze souboru na počítači, proto
+// nečeká na síť ani na probuzení cloudové databáze.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------------------------------------------------------------- uživatelé
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String // Role: TRAINER | CLIENT
+  avatarKey    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trainer       Trainer?
+  client        Client?
+  sessions      Session[]
+  notifications Notification[]
+  authoredNotes Note[]         @relation("NoteAuthor")
+
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Trainer {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients   Client[]
+  exercises Exercise[]
+  templates WorkoutTemplate[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  trainerId String
+  status    String   @default("ACTIVE") // ClientStatus: ACTIVE | PAUSED | ARCHIVED
+  birthYear Int?
+  heightCm  Int?
+  startedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainer         Trainer           @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  templates       WorkoutTemplate[]
+  workouts        Workout[]
+  personalRecords PersonalRecord[]
+  progressMetrics ProgressMetric[]
+  notes           Note[]
+  trainingPass    TrainingPass?
+
+  @@index([trainerId])
+  @@index([trainerId, status])
+}
+
+// Ručně spravovaná karta předplacených tréninků. Klient ji pouze čte;
+// počet zakoupených i využitých vstupů mění výhradně trenér.
+model TrainingPass {
+  id            String   @id @default(cuid())
+  clientId      String   @unique
+  totalSessions Int      @default(0)
+  usedSessions  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------------------- cviky
+
+model Exercise {
+  id           String   @id @default(cuid())
+  trainerId    String
+  name         String
+  category     String
+  muscleGroup  String
+  equipment    String?
+  description  String?
+  instructions String?
+  trackingType String   @default("WEIGHT_REPS") // WEIGHT_REPS | TIME
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trainer           Trainer                   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  media             ExerciseMedia[]
+  templateExercises WorkoutTemplateExercise[]
+  workoutExercises  WorkoutExercise[]
+  personalRecords   PersonalRecord[]
+
+  @@unique([trainerId, name])
+  @@index([trainerId, category])
+  @@index([trainerId, name])
+}
+
+model ExerciseMedia {
+  id         String   @id @default(cuid())
+  exerciseId String
+  kind       String // MediaKind: IMAGE | VIDEO
+  storageKey String
+  posterKey  String?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId, sortOrder])
+}
+
+// -------------------------------------------------------- šablony tréninků
+
+model WorkoutTemplate {
+  id        String @id @default(cuid())
+  trainerId String
+  // Trénink patří konkrétnímu klientovi — každý má vlastní, nesdílí se.
+  // `null` znamená šablonu v knihovně trenéra, ze které lze vytvořit kopii.
+  clientId     String?
+  name         String
+  description  String?
+  estimatedMin Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trainer   Trainer                   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  client    Client?                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercises WorkoutTemplateExercise[]
+  workouts  Workout[]
+
+  // Název musí být jedinečný v rámci jednoho klienta, ne napříč trenérem —
+  // dva klienti klidně můžou mít oba svůj "PUSH A".
+  @@unique([trainerId, clientId, name])
+  @@index([trainerId])
+  @@index([clientId])
+}
+
+model WorkoutTemplateExercise {
+  id          String  @id @default(cuid())
+  templateId  String
+  exerciseId  String
+  sortOrder   Int
+  restSeconds Int     @default(90)
+  tempo       String?
+  note        String?
+
+  template WorkoutTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise              @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  // Jednotlivé série. Každá má vlastní opakování i váhu, aby šly předepsat
+  // pyramidy (10×50, 8×60, 6×70) — ne jen "4 × 8 na jednu váhu".
+  sets     WorkoutTemplateSet[]
+
+  @@unique([templateId, sortOrder])
+  @@index([templateId])
+  @@index([exerciseId])
+}
+
+model WorkoutTemplateSet {
+  id                 String @id @default(cuid())
+  templateExerciseId String
+  setNumber          Int
+  reps               Int
+  targetWeight       Float?
+
+  templateExercise WorkoutTemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([templateExerciseId, setNumber])
+  @@index([templateExerciseId])
+}
+
+// ------------------------------------------------------ odcvičené tréninky
+
+model Workout {
+  id            String    @id @default(cuid())
+  clientId      String
+  templateId    String?
+  name          String
+  status        String    @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED | ABANDONED
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  durationSec   Int?
+  totalVolumeKg Float?
+  totalSets     Int       @default(0)
+  totalReps     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  client    Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template  WorkoutTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  exercises WorkoutExercise[]
+  notes     Note[]
+
+  @@index([clientId, startedAt])
+  @@index([clientId, status])
+}
+
+model WorkoutExercise {
+  id          String  @id @default(cuid())
+  workoutId   String
+  exerciseId  String
+  sortOrder   Int
+  restSeconds Int     @default(90)
+  tempo       String?
+  note        String?
+
+  workout  Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  // Předpis sérií zkopírovaný ze šablony při startu tréninku. Snapshot —
+  // pozdější úprava šablony nesmí měnit už rozcvičený trénink.
+  targets  WorkoutExerciseTarget[]
+  sets     WorkoutSet[]
+  notes    Note[]
+
+  @@unique([workoutId, sortOrder])
+  @@index([workoutId])
+  @@index([exerciseId])
+}
+
+model WorkoutExerciseTarget {
+  id                String @id @default(cuid())
+  workoutExerciseId String
+  setNumber         Int
+  reps              Int
+  targetWeight      Float?
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutExerciseId, setNumber])
+  @@index([workoutExerciseId])
+}
+
+model WorkoutSet {
+  id                String   @id @default(cuid())
+  workoutExerciseId String
+  setNumber         Int
+  weightKg          Float
+  reps              Int
+  completedAt       DateTime @default(now())
+  // Klientem generovaný klíč — zajišťuje idempotentní zápis při offline synchronizaci.
+  clientKey         String
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+  notes           Note[]
+
+  @@unique([workoutExerciseId, clientKey])
+  @@unique([workoutExerciseId, setNumber])
+  @@index([workoutExerciseId])
+}
+
+// ------------------------------------------------- rekordy, metriky, ostatní
+
+model PersonalRecord {
+  id           String   @id @default(cuid())
+  clientId     String
+  exerciseId   String
+  bestWeightKg Float
+  repsAtBest   Int
+  achievedAt   DateTime
+  // Připraveno pro pozdější výpočet 1RM bez migrace.
+  estimated1rm Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, exerciseId])
+  @@index([clientId])
+}
+
+model ProgressMetric {
+  id         String   @id @default(cuid())
+  clientId   String
+  metricKey  String
+  value      Float
+  recordedAt DateTime
+  createdAt  DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, metricKey, recordedAt])
+}
+
+model Note {
+  id       String @id @default(cuid())
+  authorId String
+  scope    String // NoteScope: CLIENT | WORKOUT | WORKOUT_EXERCISE | WORKOUT_SET
+  body     String
+
+  clientId          String?
+  workoutId         String?
+  workoutExerciseId String?
+  workoutSetId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author          User             @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  client          Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workout         Workout?         @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  workoutExercise WorkoutExercise? @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+  workoutSet      WorkoutSet?      @relation(fields: [workoutSetId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, createdAt])
+  @@index([workoutId])
+  @@index([authorId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // WORKOUT_COMPLETED | NOTE_ADDED
+  title     String
+  body      String
+  linkHref  String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}

@@ -2,6 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import bcrypt from "bcryptjs";
 
 /**
@@ -18,9 +19,11 @@ const db = new PrismaClient({
   // Lokální SQLite databáze už po přechodu na Postgres nepředstavuje
   // kompatibilní integrační prostředí. V CI/produkčním testování se testy
   // spustí nad explicitně zadanou PostgreSQL testovací databází.
-  adapter: new PrismaPg({
-    connectionString: process.env.DATABASE_URL ?? "postgresql://invalid/invalid",
-  }),
+  adapter: isPostgresTestDatabase
+    ? new PrismaPg({
+        connectionString: process.env.DATABASE_URL ?? "postgresql://invalid/invalid",
+      })
+    : new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./dev.db" }),
 });
 
 const PREFIX = "test-isolation-";
