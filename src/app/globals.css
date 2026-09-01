@@ -1,26 +1,208 @@
 @import "tailwindcss";
 
+/*
+  DESIGN CONTRACT — kompaktní mobilní fitness UI s pohodlnými dotykovými cíli.
+  - Základní text je 15px, ovládací prvky zůstávají dobře čitelné.
+  - Primární tlačítko 56px, sekundární 48px. Dotykový cíl nikdy pod 48px.
+  - Kontrast textu minimálně WCAG AA.
+  - Maximálně 5 barev. Žádné dekorativní animace.
+*/
+
+@theme {
+  /* Kompaktní typografie podle vybraného mobilního návrhu. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.25rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 1.875rem;
+  --text-5xl: 3rem; /* 48px — časovač */
+  --text-6xl: 4rem; /* 64px — hlavní časovač tréninku */
+
+  /* Výšky dotykových cílů */
+  --spacing-touch: 3rem; /* 48px — minimum */
+  --spacing-touch-lg: 3.5rem; /* 56px — primární akce */
+  --spacing-touch-xl: 4rem; /* 64px — hlavní akce obrazovky */
+
+  --radius-card: 0.75rem;
+  --radius-button: 0.625rem;
+}
+
+/* ---------------------------------------------------- barevné tokeny */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f7f8f5;
+  --surface: #ffffff;
+  --surface-muted: #e7eae6;
+  --border: #dde1db;
+
+  --foreground: #111411;
+  --muted-foreground: #626961;
+
+  --primary: #aef000;
+  --primary-hover: #9cda00;
+  --primary-foreground: #10130d;
+  --primary-strong: #5f8500;
+
+  --success: #95d600;
+  --success-foreground: #10130d;
+  --danger: oklch(0.55 0.2 25);
+  --danger-foreground: #ffffff;
+  --warning: #c77a00;
+  --ring: #87bd00;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #090b0b;
+  --surface: #111515;
+  --surface-muted: #171c1c;
+  --border: #2b3131;
+
+  --foreground: #f5f7f2;
+  --muted-foreground: #9da5a2;
+
+  --primary: #b7ff22;
+  --primary-hover: #c8ff55;
+  --primary-foreground: #0a0c09;
+  --primary-strong: #b7ff22;
+
+  --success: #b7ff22;
+  --success-foreground: #0a0c09;
+  --danger: oklch(0.55 0.2 25);
+  --danger-foreground: oklch(1 0 0);
+  --warning: #ffb84d;
+  --ring: #b7ff22;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes celebration-confetti {
+  0% {
+    opacity: 0;
+    translate: 0 -12px;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: calc((var(--tw-translate-x, 0px)) + 18px) 105vh;
+    rotate: 540deg;
   }
 }
 
+@keyframes celebration-flash {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    scale: 0.72;
+    translate: 0 24px;
+  }
+  14% {
+    opacity: 1;
+    scale: 1.04;
+    translate: 0 0;
+  }
+  22%, 78% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 -10px;
+  }
+}
+
+/* ------------------------------------------------------------ základ */
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  /* Zabraňuje iOS Safari zvětšit text na šířku po otočení displeje. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/*
+  Odsazení shora pro pruhy, které stojí nad celou aplikací (vývojový přepínač).
+  V produkci zůstává nula. Fixní navigace na desktopu z něj počítá svůj `top`,
+  aby ji lišta neuřízla.
+*/
+:root {
+  --app-top-offset: 0px;
+}
+
 body {
+  padding-top: var(--app-top-offset);
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(circle at 50% -10rem, rgb(174 240 0 / 0.16), transparent 31rem);
+  /* Bezpečná zóna pod spodní navigací na iPhonu s home indikátorem. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.dark body {
+  background-image: radial-gradient(circle at 50% -12rem, rgb(183 255 34 / 0.045), transparent 28rem);
+}
+
+/* Viditelný focus pro ovládání klávesnicí — nikdy neodstraňovat. */
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Číselné inputy bez spinnerů — ve fitku se ovládají tlačítky −/+ */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Tabulární číslice — časovač neposkakuje při změně číslic. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

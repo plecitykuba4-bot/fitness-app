@@ -1,0 +1,133 @@
+/**
+ * ⚠️  DEVELOPMENT ONLY — vytváří účty se známými hesly.
+ * Skript odmítne běžet v produkci.
+ */
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import bcrypt from "bcryptjs";
+
+if (process.env.NODE_ENV === "production") {
+  console.error(
+    "❌ Seed nelze spustit v produkci — vytváří demo účty se známými hesly.",
+  );
+  process.exit(1);
+}
+
+const db = new PrismaClient({
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
+});
+
+const DEMO_PASSWORD = "ChangeMe123!";
+
+type ExerciseSeed = {
+  name: string;
+  category: string;
+  muscleGroup: string;
+  equipment: string;
+  instructions: string;
+};
+
+const EXERCISES: ExerciseSeed[] = [
+  { name: "Bench press", category: "Prsa", muscleGroup: "Velký prsní sval", equipment: "Velká činka", instructions: "Lehněte si na lavici, chodidla pevně na zemi. Činku spouštějte pomalu ke středu hrudníku, lokty svírají s tělem zhruba 45°. Vytlačte nahoru bez záklonu v zádech." },
+  { name: "Tlaky s jednoručkami na šikmé lavici", category: "Prsa", muscleGroup: "Horní část prsou", equipment: "Jednoručky", instructions: "Lavici nastavte na 30°. Jednoručky tlačte nahoru a mírně k sobě, dolů spouštějte kontrolovaně do protažení." },
+  { name: "Kliky", category: "Prsa", muscleGroup: "Prsa a triceps", equipment: "Vlastní váha", instructions: "Tělo drží přímku od hlavy k patám. Spouštějte se, dokud hrudník není kousek nad zemí." },
+  { name: "Rozpažování na kladce", category: "Prsa", muscleGroup: "Velký prsní sval", equipment: "Kladka", instructions: "Mírný předklon, lokty jemně pokrčené. Ruce svádějte před tělem a na vteřinu zastavte." },
+  { name: "Přítahy velké činky v předklonu", category: "Záda", muscleGroup: "Široký sval zádový", equipment: "Velká činka", instructions: "Předklon zhruba 45°, záda rovná. Činku táhněte k pupku, lopatky stahujte k sobě." },
+  { name: "Shyby", category: "Záda", muscleGroup: "Široký sval zádový", equipment: "Hrazda", instructions: "Nadhmatem na šíři ramen. Táhněte se, dokud brada nepřejde hrazdu, dolů kontrolovaně do napnutých paží." },
+  { name: "Stahování horní kladky", category: "Záda", muscleGroup: "Široký sval zádový", equipment: "Kladka", instructions: "Hrudník vzhůru, tyč táhněte k horní části hrudníku. Netahejte za hlavu." },
+  { name: "Mrtvý tah", category: "Záda", muscleGroup: "Vzpřimovače a hýždě", equipment: "Velká činka", instructions: "Činka nad středem chodidla, záda rovná. Vedení tahu přes paty, boky a ramena stoupají současně." },
+  { name: "Veslování na spodní kladce", category: "Záda", muscleGroup: "Střední část zad", equipment: "Kladka", instructions: "Sed vzpřímeně, rukojeť táhněte k břichu, lopatky k sobě." },
+  { name: "Tlaky na ramena s jednoručkami", category: "Ramena", muscleGroup: "Deltový sval", equipment: "Jednoručky", instructions: "Sed s opřenými zády. Jednoručky tlačte nad hlavu, dolů spouštějte do úrovně uší." },
+  { name: "Upažování", category: "Ramena", muscleGroup: "Střední hlava deltu", equipment: "Jednoručky", instructions: "Lokty jemně pokrčené, upažujte do výše ramen. Netrhejte tělem." },
+  { name: "Předpažování", category: "Ramena", muscleGroup: "Přední hlava deltu", equipment: "Jednoručky", instructions: "Střídavě předpažujte do výše ramen, tělo zůstává v klidu." },
+  { name: "Rozpažování v předklonu", category: "Ramena", muscleGroup: "Zadní hlava deltu", equipment: "Jednoručky", instructions: "Předklon, záda rovná. Rozpažujte do stran, lopatky stahujte." },
+  { name: "Bicepsový zdvih s velkou činkou", category: "Biceps", muscleGroup: "Dvojhlavý sval pažní", equipment: "Velká činka", instructions: "Lokty u těla, činku zvedejte bez houpání trupem." },
+  { name: "Kladivové zdvihy", category: "Biceps", muscleGroup: "Biceps a předloktí", equipment: "Jednoručky", instructions: "Dlaně proti sobě po celou dobu pohybu. Lokty zůstávají u těla." },
+  { name: "Bicepsový zdvih na kazatelně", category: "Biceps", muscleGroup: "Dvojhlavý sval pažní", equipment: "EZ osa", instructions: "Paže opřené o podložku. Dolů spouštějte pomalu do téměř napnutých loktů." },
+  { name: "Tricepsové stahování kladky", category: "Triceps", muscleGroup: "Trojhlavý sval pažní", equipment: "Kladka", instructions: "Lokty přitisknuté k tělu, pohyb vychází jen z předloktí." },
+  { name: "Francouzský tlak", category: "Triceps", muscleGroup: "Trojhlavý sval pažní", equipment: "EZ osa", instructions: "Vleže spouštějte osu k čelu, lokty směřují vzhůru a nerozjíždějí se." },
+  { name: "Tricepsové kliky na bradlech", category: "Triceps", muscleGroup: "Trojhlavý sval pažní", equipment: "Bradla", instructions: "Trup mírně vpřed. Spouštějte se do 90° v lokti a vytlačte zpět." },
+  { name: "Dřep s velkou činkou", category: "Nohy", muscleGroup: "Čtyřhlavý sval stehenní", equipment: "Velká činka", instructions: "Činka na horní části zad, chodidla na šíři ramen. Klesejte do podřepu se zády v přirozeném prohnutí, kolena sledují špičky." },
+  { name: "Leg press", category: "Nohy", muscleGroup: "Čtyřhlavý sval stehenní", equipment: "Stroj", instructions: "Chodidla na šíři ramen. Spouštějte kontrolovaně, kolena nezamykejte v horní pozici." },
+  { name: "Výpady s jednoručkami", category: "Nohy", muscleGroup: "Stehna a hýždě", equipment: "Jednoručky", instructions: "Krok vpřed, zadní koleno klesá k zemi. Trup zůstává vzpřímený." },
+  { name: "Předkopávání na stroji", category: "Nohy", muscleGroup: "Čtyřhlavý sval stehenní", equipment: "Stroj", instructions: "Nahoře na vteřinu zastavte a stehno napněte." },
+  { name: "Zakopávání na stroji", category: "Nohy", muscleGroup: "Hamstringy", equipment: "Stroj", instructions: "Pohyb veďte pomalu, boky zůstávají na podložce." },
+  { name: "Hip thrust", category: "Hýždě", muscleGroup: "Velký sval hýžďový", equipment: "Velká činka", instructions: "Lopatky opřené o lavici. Boky zvedejte do roviny s trupem a nahoře hýždě sevřete." },
+  { name: "Rumunský mrtvý tah", category: "Hýždě", muscleGroup: "Hýždě a hamstringy", equipment: "Velká činka", instructions: "Nohy téměř napnuté, boky posouvejte vzad. Cítíte tah v zadní straně stehen." },
+  { name: "Plank", category: "Střed těla", muscleGroup: "Hluboký stabilizační systém", equipment: "Vlastní váha", instructions: "Předloktí pod rameny, tělo v přímce. Nezvedejte ani neprohýbejte boky." },
+  { name: "Zkracovačky", category: "Střed těla", muscleGroup: "Přímý sval břišní", equipment: "Vlastní váha", instructions: "Bedra zůstávají na zemi, zvedejte jen lopatky. Krk netahejte rukama." },
+  { name: "Veslovací trenažér", category: "Kardio", muscleGroup: "Celé tělo", equipment: "Veslovací trenažér", instructions: "Pořadí pohybu: nohy, trup, paže. Zpět opačně." },
+  { name: "Rotoped", category: "Kardio", muscleGroup: "Nohy a oběhový systém", equipment: "Rotoped", instructions: "Sedlo nastavte tak, aby koleno bylo v dolní poloze mírně pokrčené." },
+];
+
+type TemplateSeed = {
+  name: string;
+  description: string;
+  estimatedMin: number;
+  items: { exercise: string; sets: number; reps: number; weight: number | null; rest: number }[];
+};
+
+const TEMPLATES: TemplateSeed[] = [
+  {
+    name: "PUSH A",
+    description: "Prsa, ramena, triceps.",
+    estimatedMin: 55,
+    items: [
+      { exercise: "Bench press", sets: 4, reps: 8, weight: 80, rest: 120 },
+      { exercise: "Tlaky s jednoručkami na šikmé lavici", sets: 3, reps: 10, weight: 28, rest: 90 },
+      { exercise: "Tlaky na ramena s jednoručkami", sets: 3, reps: 10, weight: 22, rest: 90 },
+      { exercise: "Upažování", sets: 3, reps: 12, weight: 10, rest: 60 },
+      { exercise: "Tricepsové stahování kladky", sets: 3, reps: 12, weight: 30, rest: 60 },
+    ],
+  },
+  {
+    name: "PULL A",
+    description: "Záda a biceps.",
+    estimatedMin: 55,
+    items: [
+      { exercise: "Přítahy velké činky v předklonu", sets: 4, reps: 8, weight: 65, rest: 120 },
+      { exercise: "Stahování horní kladky", sets: 3, reps: 10, weight: 55, rest: 90 },
+      { exercise: "Veslování na spodní kladce", sets: 3, reps: 10, weight: 50, rest: 90 },
+      { exercise: "Rozpažování v předklonu", sets: 3, reps: 12, weight: 8, rest: 60 },
+      { exercise: "Bicepsový zdvih s velkou činkou", sets: 3, reps: 12, weight: 30, rest: 60 },
+    ],
+  },
+  {
+    name: "LEGS A",
+    description: "Nohy a hýždě.",
+    estimatedMin: 60,
+    items: [
+      { exercise: "Dřep s velkou činkou", sets: 4, reps: 8, weight: 100, rest: 150 },
+      { exercise: "Rumunský mrtvý tah", sets: 3, reps: 10, weight: 80, rest: 120 },
+      { exercise: "Leg press", sets: 3, reps: 12, weight: 140, rest: 90 },
+      { exercise: "Zakopávání na stroji", sets: 3, reps: 12, weight: 35, rest: 60 },
+      { exercise: "Plank", sets: 3, reps: 1, weight: null, rest: 60 },
+    ],
+  },
+  {
+    name: "UPPER A",
+    description: "Celý horní díl těla.",
+    estimatedMin: 50,
+    items: [
+      { exercise: "Shyby", sets: 4, reps: 6, weight: null, rest: 120 },
+      { exercise: "Bench press", sets: 3, reps: 10, weight: 70, rest: 120 },
+      { exercise: "Veslování na spodní kladce", sets: 3, reps: 10, weight: 50, rest: 90 },
+      { exercise: "Tlaky na ramena s jednoručkami", sets: 3, reps: 10, weight: 20, rest: 90 },
+      { exercise: "Kladivové zdvihy", sets: 3, reps: 12, weight: 12, rest: 60 },
+    ],
+  },
+  {
+    name: "FULL BODY",
+    description: "Celotělový trénink pro začátek týdne.",
+    estimatedMin: 45,
+    items: [
+      { exercise: "Dřep s velkou činkou", sets: 3, reps: 10, weight: 80, rest: 120 },
+      { exercise: "Bench press", sets: 3, reps: 10, weight: 65, rest: 120 },
+      { exercise: "Stahování horní kladky", sets: 3, reps: 10, weight: 50, rest: 90 },
+      { exercise: "Hip thrust", sets: 3, reps: 12, weight: 60, rest: 90 },
+      { exercise: "Zkracovačky", sets: 3, reps: 15, weight: null, rest: 45 },
+    ],
+  },
+];
+
