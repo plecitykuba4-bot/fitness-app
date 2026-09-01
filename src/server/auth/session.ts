@@ -33,10 +33,12 @@ export async function verifyPassword(
 /** Vytvoří session v databázi a nastaví httpOnly cookie. */
 export async function createSession(userId: string): Promise<void> {
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
-  const session = await db.session.create({ data: { userId, expiresAt } });
+  const sessionId = process.env.DEMO_MODE === "true"
+    ? `demo:${userId}`
+    : (await db.session.create({ data: { userId, expiresAt } })).id;
 
   const store = await cookies();
-  store.set(COOKIE_NAME, session.id, {
+  store.set(COOKIE_NAME, sessionId, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -48,7 +50,7 @@ export async function createSession(userId: string): Promise<void> {
 export async function destroySession(): Promise<void> {
   const store = await cookies();
   const id = store.get(COOKIE_NAME)?.value;
-  if (id) {
+  if (id && !id.startsWith("demo:")) {
     // Session nemusí existovat (např. už vypršela) — smazání nesmí shodit odhlášení.
     await db.session.deleteMany({ where: { id } });
   }
@@ -63,6 +65,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const store = await cookies();
   const sessionId = store.get(COOKIE_NAME)?.value;
   if (!sessionId) return null;
+
+  if (process.env.DEMO_MODE === "true" && sessionId.startsWith("demo:")) {
+    const user = await db.user.findUnique({
+      where: { id: sessionId.slice(5) },
+      include: { trainer: true, client: true },
+    });
+    if (!user) return null;
+    const role = RoleSchema.safeParse(user.role);
+    if (!role.success) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: role.data,
+      trainerId: user.trainer?.id ?? null,
+      clientId: user.client?.id ?? null,
+    };
+  }
 
   const session = await db.session.findUnique({
     where: { id: sessionId },

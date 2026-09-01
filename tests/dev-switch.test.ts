@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Přepínač účtů obchází hesla, takže v produkci nesmí být dostupný ani omylem.
- * Tenhle test hlídá právě to — kdyby někdo podmínku obrátil nebo smazal,
- * spadne dřív, než se to dostane na produkci.
+ * Přepínač účtů obchází hesla, takže v běžné produkci nesmí být dostupný.
+ * Výjimkou je výslovně zapnutý DEMO_MODE pro neveřejnou prezentaci.
  */
 
 const loadModule = async () => {
@@ -20,12 +19,14 @@ afterEach(() => {
 describe("vývojový přepínač účtů", () => {
   it("je v produkci vypnutý", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEMO_MODE", "false");
     const { isDevSwitchEnabled } = await loadModule();
     expect(isDevSwitchEnabled()).toBe(false);
   });
 
   it("v produkci nevrátí žádné účty", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEMO_MODE", "false");
     const { listDevUsers } = await loadModule();
     await expect(listDevUsers()).resolves.toEqual([]);
   });
@@ -38,6 +39,13 @@ describe("vývojový přepínač účtů", () => {
 
   it("je zapnutý při testech", async () => {
     vi.stubEnv("NODE_ENV", "test");
+    const { isDevSwitchEnabled } = await loadModule();
+    expect(isDevSwitchEnabled()).toBe(true);
+  });
+
+  it("je zapnutý v prezentačním režimu", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEMO_MODE", "true");
     const { isDevSwitchEnabled } = await loadModule();
     expect(isDevSwitchEnabled()).toBe(true);
   });

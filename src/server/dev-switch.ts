@@ -11,7 +11,7 @@ import { db } from "@/server/db";
  */
 
 export function isDevSwitchEnabled(): boolean {
-  return process.env.NODE_ENV !== "production";
+  return process.env.NODE_ENV !== "production" || process.env.DEMO_MODE === "true";
 }
 
 export type DevUser = {

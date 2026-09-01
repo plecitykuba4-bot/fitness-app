@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { copyFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 /**
  * Prisma 7 se připojuje přes driver adapter, ne přes URL ve schématu.
@@ -8,7 +11,18 @@ import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
  */
 
 function createClient() {
-  const url = process.env.DATABASE_URL;
+  let url = process.env.DATABASE_URL;
+
+  // Prezentační nasazení na Vercelu používá dočasnou kopii ukázkové databáze.
+  // Zápisy fungují v rámci instance, ale nejsou trvalé — to je pro demo záměr.
+  if (process.env.DEMO_MODE === "true") {
+    const demoTarget = path.join(tmpdir(), "fitness-app-demo.db");
+    if (!existsSync(demoTarget)) {
+      copyFileSync(path.join(process.cwd(), "prisma", "demo.db"), demoTarget);
+    }
+    url = `file:${demoTarget}`;
+  }
+
   if (!url) {
     throw new Error(
       "Chybí proměnná prostředí DATABASE_URL. Zkopírujte .env.example do .env.",
