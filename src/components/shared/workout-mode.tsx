@@ -595,7 +595,7 @@ function SetRow({
         <>
           <label
             className={cn(
-              "flex min-h-touch min-w-0 items-center justify-center rounded-[var(--radius-button)] border-2 bg-surface-muted px-2 focus-within:border-primary",
+              "flex min-h-touch min-w-0 items-center justify-center rounded-full border-2 bg-surface-muted px-2 focus-within:border-primary",
               done ? "border-transparent" : "border-primary/65",
             )}
           >
