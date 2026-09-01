@@ -15,5 +15,10 @@ export default defineConfig({
     // Seed je idempotentní: naplní jen zcela prázdnou produkční databázi.
     seed: "tsx prisma/seed.ts",
   },
-  datasource: { url: process.env.DATABASE_URL! },
+  // Vercel/Neon dodává oddělenou přímou URL pro administrativní operace.
+  // Migrace přes pooler mohou čekat na advisory lock, proto jim dáme přednost.
+  // Lokálně zůstává zpětně kompatibilní DATABASE_URL.
+  datasource: {
+    url: process.env.POSTGRES_URL_NON_POOLING ?? process.env.DATABASE_URL!,
+  },
 });
