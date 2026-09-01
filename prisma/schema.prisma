@@ -1,9 +1,7 @@
 // Fitness coaching platform — databázové schéma
 //
-// PORTABILITA: provider je SQLite pro lokální vývoj bez instalace čehokoliv.
-// Schéma je psané tak, aby přechod na PostgreSQL byl změnou jediného řádku níže
-// (provider = "postgresql"). Proto zde nejsou nativní enumy ani @db.Decimal —
-// enumy jsou String validované přes Zod v src/lib/enums.ts, váhy jsou Float.
+// Produkční i vývojová databáze používá PostgreSQL. Enumy zůstávají jako String
+// validované přes Zod v src/lib/enums.ts, aby se schéma snadno vyvíjelo.
 
 generator client {
   provider = "prisma-client-js"
@@ -12,7 +10,7 @@ generator client {
 // Prisma 7: connection string se nezadává zde, ale v prisma.config.ts
 // (pro migrace) a přes driver adapter v src/server/db.ts (pro runtime).
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ---------------------------------------------------------------- uživatelé

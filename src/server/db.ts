@@ -1,27 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { copyFileSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 /**
  * Prisma 7 se připojuje přes driver adapter, ne přes URL ve schématu.
- * Při přechodu na PostgreSQL vyměň adapter za @prisma/adapter-pg
- * a v prisma/schema.prisma změň provider na "postgresql".
+ * Vercel/Neon poskytuje DATABASE_URL jako proměnnou prostředí.
  */
 
 function createClient() {
-  let url = process.env.DATABASE_URL;
-
-  // Prezentační nasazení na Vercelu používá dočasnou kopii ukázkové databáze.
-  // Zápisy fungují v rámci instance, ale nejsou trvalé — to je pro demo záměr.
-  if (process.env.DEMO_MODE === "true") {
-    const demoTarget = path.join(tmpdir(), "fitness-app-demo.db");
-    if (!existsSync(demoTarget)) {
-      copyFileSync(path.join(process.cwd(), "prisma", "demo.db"), demoTarget);
-    }
-    url = `file:${demoTarget}`;
-  }
+  const url = process.env.DATABASE_URL;
 
   if (!url) {
     throw new Error(
@@ -29,7 +15,7 @@ function createClient() {
     );
   }
   return new PrismaClient({
-    adapter: new PrismaBetterSqlite3({ url }),
+    adapter: new PrismaPg({ connectionString: url }),
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 }
@@ -42,4 +28,4 @@ const globalForPrisma = globalThis as unknown as {
 
 export const db = globalForPrisma.prisma ?? createClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+globalForPrisma.prisma = db;

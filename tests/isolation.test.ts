@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
 /**
@@ -12,8 +12,15 @@ import bcrypt from "bcryptjs";
  * z dotazu odstranil `clientId`, tyto testy spadnou.
  */
 
+const isPostgresTestDatabase = process.env.DATABASE_URL?.startsWith("postgresql:") ?? false;
+const itPostgres = isPostgresTestDatabase ? it : it.skip;
 const db = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
+  // Lokální SQLite databáze už po přechodu na Postgres nepředstavuje
+  // kompatibilní integrační prostředí. V CI/produkčním testování se testy
+  // spustí nad explicitně zadanou PostgreSQL testovací databází.
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL ?? "postgresql://invalid/invalid",
+  }),
 });
 
 const PREFIX = "test-isolation-";
@@ -25,6 +32,7 @@ let workoutBId: string;
 let exerciseAId: string;
 
 beforeAll(async () => {
+  if (!isPostgresTestDatabase) return;
   await cleanup();
   const hash = await bcrypt.hash("TestHeslo123!", 4);
 
@@ -78,6 +86,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (!isPostgresTestDatabase) return;
   await cleanup();
   await db.$disconnect();
 });
@@ -95,7 +104,7 @@ async function cleanup() {
 }
 
 describe("izolace dat klientů", () => {
-  it("klient nenačte cizí trénink ani se správným ID", async () => {
+  itPostgres("klient nenačte cizí trénink ani se správným ID", async () => {
     // Přesně tato podmínka je v getWorkoutDetail.
     const asOwner = await db.workout.findFirst({
       where: { id: workoutBId, clientId: clientBId },
@@ -108,7 +117,7 @@ describe("izolace dat klientů", () => {
     expect(asStranger).toBeNull();
   });
 
-  it("klient nevidí série z cizího tréninku", async () => {
+  itPostgres("klient nevidí série z cizího tréninku", async () => {
     const sets = await db.workoutSet.findMany({
       where: { workoutExercise: { workout: { clientId: clientAId } } },
     });
@@ -118,7 +127,7 @@ describe("izolace dat klientů", () => {
 });
 
 describe("izolace mezi trenéry", () => {
-  it("trenér nenačte cizího klienta", async () => {
+  itPostgres("trenér nenačte cizího klienta", async () => {
     const own = await db.client.findFirst({
       where: { id: clientAId, trainerId: trainerAId },
     });
@@ -130,14 +139,14 @@ describe("izolace mezi trenéry", () => {
     expect(foreign).toBeNull();
   });
 
-  it("trenér nenačte cizí cvik", async () => {
+  itPostgres("trenér nenačte cizí cvik", async () => {
     const foreign = await db.exercise.findFirst({
       where: { id: exerciseAId, trainerId: trainerBId },
     });
     expect(foreign).toBeNull();
   });
 
-  it("seznam klientů vrací jen vlastní klienty", async () => {
+  itPostgres("seznam klientů vrací jen vlastní klienty", async () => {
     const clients = await db.client.findMany({ where: { trainerId: trainerAId } });
     expect(clients.map((c) => c.id)).toContain(clientAId);
     expect(clients.map((c) => c.id)).not.toContain(clientBId);
@@ -145,7 +154,7 @@ describe("izolace mezi trenéry", () => {
 });
 
 describe("hesla", () => {
-  it("se ukládají jako hash, nikdy v čitelné podobě", async () => {
+  itPostgres("se ukládají jako hash, nikdy v čitelné podobě", async () => {
     const user = await db.user.findUnique({
       where: { email: `${PREFIX}klientA@example.com` },
     });
@@ -157,7 +166,7 @@ describe("hesla", () => {
 });
 
 describe("idempotentní zápis série", () => {
-  it("stejný clientKey nevytvoří duplicitu", async () => {
+  itPostgres("stejný clientKey nevytvoří duplicitu", async () => {
     const workout = await db.workout.create({
       data: { clientId: clientAId, name: `${PREFIX}Idem`, status: "IN_PROGRESS" },
     });

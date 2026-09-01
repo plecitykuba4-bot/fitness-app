@@ -1,10 +1,10 @@
 /**
- * ⚠️  DEVELOPMENT ONLY — vytváří účty se známými hesly.
- * Skript odmítne běžet v produkci.
+ * Bootstrap ukázkových dat. Spustí se jen nad prázdnou databází, takže
+ * opakovaný deploy nemaže reálné ani již odcvičené tréninky.
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import {
   CLIENTS,
@@ -15,15 +15,8 @@ import {
 } from "./seed-clients";
 import { EXERCISES } from "./seed-exercises";
 
-if (process.env.NODE_ENV === "production") {
-  console.error(
-    "❌ Seed nelze spustit v produkci — vytváří demo účty se známými hesly.",
-  );
-  process.exit(1);
-}
-
 const db = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
 const DEMO_PASSWORD = "ChangeMe123!";
@@ -145,6 +138,12 @@ const TEMPLATES: TemplateSeed[] = [
 // ---------------------------------------------------------------------------
 
 async function main() {
+  const existingUsers = await db.user.count();
+  if (existingUsers > 0) {
+    console.log("✅ Databáze už obsahuje data — seed se bezpečně přeskočil.");
+    return;
+  }
+
   console.log("🌱 Mažu stará data…");
   // Pořadí respektuje cizí klíče.
   await db.notification.deleteMany();

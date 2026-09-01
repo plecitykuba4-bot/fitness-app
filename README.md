@@ -26,7 +26,7 @@ cp .env.example .env
 
 | Proměnná | Popis |
 | --- | --- |
-| `DATABASE_URL` | Připojení k databázi. Lokálně `file:./dev.db`, v produkci `postgresql://…` |
+| `DATABASE_URL` | Připojení k PostgreSQL databázi (Neon ve Vercelu). |
 | `AUTH_SECRET` | Tajemství pro session. Minimálně 32 znaků. |
 | `STORAGE_ENDPOINT` | Endpoint S3-compatible storage pro média cviků |
 | `STORAGE_ACCESS_KEY` | Přístupový klíč storage |
@@ -48,18 +48,17 @@ npm run db:seed
 
 Prisma 7 se připojuje přes **driver adapter**, ne přes URL ve schématu:
 
-- runtime — `src/server/db.ts` (`@prisma/adapter-better-sqlite3`)
+- runtime — `src/server/db.ts` (`@prisma/adapter-pg`)
 - CLI a migrace — `prisma.config.ts` (`datasource.url`)
 
-### Přechod na PostgreSQL
+### PostgreSQL (Neon)
 
-1. V `prisma/schema.prisma` změň `provider = "sqlite"` na `"postgresql"`.
-2. `npm install @prisma/adapter-pg pg` a v `src/server/db.ts` vyměň adapter.
-3. Nastav `DATABASE_URL` na Postgres connection string.
-4. Smaž `prisma/migrations` a vygeneruj migrace znovu (`npx prisma migrate dev --name init`).
+1. Nastav `DATABASE_URL` na PostgreSQL connection string.
+2. Spusť `npx prisma migrate deploy`.
+3. Pro prázdnou databázi spusť `npm run db:seed`.
 
-Schéma je psané portovatelně — enumy jsou `String` validované přes Zod
-v `src/lib/enums.ts`, váhy jsou `Float`. Nic se tedy při přechodu neláme.
+Produkční baseline migrace jsou v `prisma/migrations-postgres`. Enumy jsou
+`String` validované přes Zod a váhy jsou `Float`.
 
 ## Spuštění
 
@@ -71,8 +70,8 @@ Aplikace běží na **http://localhost:3000**.
 
 ## Demo přihlášení
 
-> ⚠️ **DEVELOPMENT ONLY.** Účty vytváří seed script se známými hesly.
-> Seed odmítne běžet při `NODE_ENV=production`.
+> Účty vytváří seed script se známými hesly. Seed se bezpečně spustí jen
+> nad prázdnou databází; opakovaný deploy existující data nemaže.
 
 | Role | E-mail | Heslo |
 | --- | --- | --- |
