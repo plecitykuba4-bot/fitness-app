@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RestSeparator } from "@/components/shared/rest-separator";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import { useElapsedSeconds } from "@/hooks/use-elapsed";
 import {
   addExerciseToWorkoutAction,
@@ -698,42 +699,30 @@ function AddExerciseCard({
   onAdd: (exerciseId: string) => void;
 }) {
   const [selected, setSelected] = useState("");
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, AvailableExercise[]>();
-    for (const ex of exercises) {
-      const list = map.get(ex.category) ?? [];
-      list.push(ex);
-      map.set(ex.category, list);
-    }
-    return map;
-  }, [exercises]);
+  const categories = [...new Set(exercises.map((exercise) => exercise.category))];
 
   if (exercises.length === 0) return null;
 
   return (
     <Card className="mt-6 p-5">
       <h2 className="mb-3 text-xl font-bold">Přidat cvik do tréninku</h2>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="min-w-0 flex-1">
-          <span className="sr-only">Vyberte cvik</span>
-          <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            className="min-h-touch-lg w-full rounded-[var(--radius-button)] border-2 border-border bg-surface px-4 text-lg text-foreground focus:border-primary focus:outline-none"
-          >
-            <option value="">Vyberte cvik</option>
-            {[...grouped.entries()].map(([category, items]) => (
-              <optgroup key={category} label={category}>
-                {items.map((ex) => (
-                  <option key={ex.id} value={ex.id}>
-                    {ex.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <SearchableSelect
+            id="add-exercise-to-workout"
+            placeholder="Napište název cviku…"
+            emptyLabel="Žádný cvik neodpovídá"
+            categories={categories}
+            onValueChange={setSelected}
+            options={exercises.map((exercise) => ({
+              value: exercise.id,
+              label: exercise.name,
+              description: exercise.category,
+              keywords: exercise.category,
+              category: exercise.category,
+            }))}
+          />
+        </div>
         <Button
           type="button"
           disabled={disabled || !selected}
