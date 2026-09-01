@@ -119,19 +119,16 @@ export async function getTrainerClients(trainerId: string) {
           workouts: { where: { status: "COMPLETED" } },
         },
       },
+      // Pro seznam stačí poslední dokončený trénink. Dříve se stahovala
+      // kompletní historie všech klientů a až v aplikaci se zahazovala.
+      workouts: {
+        where: { status: "COMPLETED" },
+        orderBy: { startedAt: "desc" },
+        take: 1,
+        select: { startedAt: true, name: true },
+      },
     },
   });
-
-  const lastWorkouts = await db.workout.findMany({
-    where: { client: { trainerId }, status: "COMPLETED" },
-    orderBy: { startedAt: "desc" },
-    select: { clientId: true, startedAt: true, name: true },
-  });
-
-  const lastByClient = new Map<string, { startedAt: Date; name: string }>();
-  for (const w of lastWorkouts) {
-    if (!lastByClient.has(w.clientId)) lastByClient.set(w.clientId, w);
-  }
 
   return clients.map((c) => ({
     id: c.id,
@@ -140,6 +137,6 @@ export async function getTrainerClients(trainerId: string) {
     status: c.status,
     planCount: c._count.templates,
     workoutCount: c._count.workouts,
-    lastWorkout: lastByClient.get(c.id) ?? null,
+    lastWorkout: c.workouts[0] ?? null,
   }));
 }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
@@ -61,7 +62,11 @@ export async function destroySession(): Promise<void> {
  * Načte přihlášeného uživatele, nebo null. Nevyhazuje výjimku —
  * pro vynucení přihlášení použij requireUser/requireTrainer/requireClient.
  */
-export async function getSessionUser(): Promise<SessionUser | null> {
+/**
+ * Jedno ověření účtu pro celý serverový render. Layout i stránka potřebují
+ * stejného uživatele; React cache tak zabrání duplicitnímu dotazu do DB.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const store = await cookies();
   const sessionId = store.get(COOKIE_NAME)?.value;
   if (!sessionId) return null;
@@ -109,7 +114,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     trainerId: session.user.trainer?.id ?? null,
     clientId: session.user.client?.id ?? null,
   };
-}
+});
 
 /** Smaže expirované sessions. Volat příležitostně, ne na každý request. */
 export async function pruneExpiredSessions(): Promise<number> {
