@@ -5,6 +5,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import bcrypt from "bcryptjs";
 import {
   CLIENTS,
@@ -15,8 +16,14 @@ import {
 } from "./seed-clients";
 import { EXERCISES } from "./seed-exercises";
 
+const databaseUrl = process.env.DATABASE_URL!;
 const db = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
+  // VPS demo běží nad lokální SQLite databází; cloudová produkce dál používá
+  // PostgreSQL. Seed musí podporovat obě varianty, aby se čistý server uměl
+  // sám naplnit ukázkovými klienty a historií tréninků.
+  adapter: databaseUrl.startsWith("file:")
+    ? new PrismaBetterSqlite3({ url: databaseUrl })
+    : new PrismaPg({ connectionString: databaseUrl }),
 });
 
 const DEMO_PASSWORD = "ChangeMe123!";
