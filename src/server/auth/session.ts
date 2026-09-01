@@ -42,7 +42,12 @@ export async function createSession(userId: string): Promise<void> {
   store.set(COOKIE_NAME, sessionId, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Ukázková VPS verze je do napojení domény dostupná přes HTTP/IP.
+    // `Secure` cookie by se přes HTTP vůbec neposlala a přepínač účtů by
+    // po každém kliknutí působil jako odhlášený. Ostrý režim (bez DEMO_MODE)
+    // nadále vyžaduje HTTPS cookie.
+    secure:
+      process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true",
     path: "/",
     expires: expiresAt,
   });
