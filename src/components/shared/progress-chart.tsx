@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import {
   Line,
   LineChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -26,6 +27,20 @@ export function ProgressChart({
   unit: string;
   ariaLabel: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const measure = () => setWidth(Math.floor(container.getBoundingClientRect().width));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   if (data.length < 2) {
     return (
       <p className="py-8 text-center text-lg text-muted-foreground">
@@ -47,9 +62,9 @@ export function ProgressChart({
   const yMax = Math.ceil((dataMax + padding) * 2) / 2;
 
   return (
-    <div role="img" aria-label={ariaLabel} className="h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+    <div ref={containerRef} role="img" aria-label={ariaLabel} className="h-64 w-full">
+      {width > 0 && (
+        <LineChart width={width} height={256} data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis
             dataKey="date"
@@ -89,7 +104,7 @@ export function ProgressChart({
             dot={{ r: 4, fill: "var(--primary)" }}
           />
         </LineChart>
-      </ResponsiveContainer>
+      )}
     </div>
   );
 }

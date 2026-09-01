@@ -16,7 +16,14 @@ export function StartWorkoutButton({ templateId }: { templateId: string }) {
     startTransition(async () => {
       const result = await startWorkoutAction(templateId);
       if (result.ok) {
-        router.push(`/trenink/${result.data.workoutId}`);
+        const href = `/trenink/${result.data.workoutId}`;
+        // Bezplatný tunel neumí spolehlivě přenést Next.js klientskou
+        // navigaci. Běžné načtení stránky je pro ukázku spolehlivé.
+        if (window.location.hostname.endsWith(".serveousercontent.com")) {
+          window.location.assign(href);
+        } else {
+          router.push(href);
+        }
       } else {
         setError(result.error);
       }

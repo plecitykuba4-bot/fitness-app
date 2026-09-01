@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { DevSwitcher } from "@/components/shared/dev-switcher";
+import { TunnelNavigationFallback } from "@/components/shared/tunnel-navigation-fallback";
 
 export const metadata: Metadata = {
   title: "Fitness trenér",
@@ -29,6 +30,7 @@ export default function RootLayout({
         </Script>
         {/* Vývojová pomůcka — v produkci se nevykreslí. */}
         <DevSwitcher />
+        <TunnelNavigationFallback />
         {children}
       </body>
     </html>

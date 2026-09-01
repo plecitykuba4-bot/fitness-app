@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -24,6 +25,20 @@ export type WeekPoint = {
  * Týdny bez tréninku jsou vidět jako mezera, ne jako pokles k nule.
  */
 export function WeeklyVolumeChart({ data }: { data: WeekPoint[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const measure = () => setWidth(Math.floor(container.getBoundingClientRect().width));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   if (data.length === 0) {
     return (
       <p className="py-8 text-center text-lg text-muted-foreground">
@@ -34,12 +49,13 @@ export function WeeklyVolumeChart({ data }: { data: WeekPoint[] }) {
 
   return (
     <div
+      ref={containerRef}
       role="img"
       aria-label="Sloupcový graf objemu po týdnech za posledních 12 týdnů"
       className="h-72 w-full"
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+      {width > 0 && (
+        <BarChart width={width} height={288} data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis
             dataKey="weekStart"
@@ -93,7 +109,7 @@ export function WeeklyVolumeChart({ data }: { data: WeekPoint[] }) {
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      )}
     </div>
   );
 }
