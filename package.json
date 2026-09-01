@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
+    "setup:vps-demo": "node scripts/setup-vps-demo.mjs",
     "db:sync-exercises": "node --experimental-strip-types scripts/sync-exercise-library.mts",
     "db:studio": "prisma studio",
     "test": "vitest run",
