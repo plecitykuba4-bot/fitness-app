@@ -1,7 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { requireClient } from "@/server/auth/guards";
 import { db } from "@/server/db";
-import { getWorkoutDetail, getLastPerformance } from "@/server/queries/client";
+import {
+  getWorkoutDetail,
+  getLastPerformance,
+  getLastSetPerformances,
+} from "@/server/queries/client";
 import {
   WorkoutMode,
   type WorkoutExerciseView,
@@ -23,8 +27,13 @@ export default async function WorkoutPage({
 
   if (workout.status === "COMPLETED") redirect(`/trenink/${workout.id}/souhrn`);
 
-  const [lastPerformance, clientRow] = await Promise.all([
+  const [lastPerformance, lastSetPerformances, clientRow] = await Promise.all([
     getLastPerformance(
+      client.clientId,
+      workout.exercises.map((e) => e.exerciseId),
+      workout.id,
+    ),
+    getLastSetPerformances(
       client.clientId,
       workout.exercises.map((e) => e.exerciseId),
       workout.id,
@@ -76,6 +85,18 @@ export default async function WorkoutPage({
             date: last.date.toISOString(),
           }
         : null,
+      lastSets: we.targets.map((target) => {
+        const previous = lastSetPerformances.get(
+          `${we.exerciseId}:${target.setNumber}`,
+        );
+        return previous
+          ? {
+              setNumber: target.setNumber,
+              weightKg: previous.weightKg,
+              reps: previous.reps,
+            }
+          : null;
+      }).filter((set): set is { setNumber: number; weightKg: number; reps: number } => set !== null),
     };
   });
 

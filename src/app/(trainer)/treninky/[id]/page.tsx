@@ -75,7 +75,9 @@ export default async function TemplateDetailPage({
           <TemplateExerciseList
             items={template.exercises.map((item) => ({
               id: item.id,
+              exerciseId: item.exerciseId,
               name: item.exercise.name,
+              imageUrl: item.exercise.media.find((media) => media.kind === "IMAGE")?.storageKey,
               restSeconds: item.restSeconds,
               note: item.note,
               sets: item.sets.map((set) => ({

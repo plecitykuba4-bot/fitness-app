@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatWeight } from "@/lib/format";
+import { ExerciseImageUpload } from "./exercise-image-upload";
 
 export type SetItem = {
   setNumber: number;
@@ -28,7 +29,9 @@ export type SetItem = {
 
 export type Item = {
   id: string;
+  exerciseId: string;
   name: string;
+  imageUrl?: string;
   restSeconds: number;
   note: string | null;
   sets: SetItem[];
@@ -136,6 +139,7 @@ function ExerciseRow({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-xl font-bold">{item.name}</p>
+          <ExerciseImageUpload exerciseId={item.exerciseId} imageUrl={item.imageUrl} />
 
           {editing ? (
             <div className="mt-4 flex flex-col gap-4">

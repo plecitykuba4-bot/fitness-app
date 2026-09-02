@@ -105,7 +105,7 @@ export async function requireOwnedTemplate(templateId: string) {
       exercises: {
         orderBy: { sortOrder: "asc" },
         include: {
-          exercise: true,
+          exercise: { include: { media: { orderBy: { sortOrder: "asc" } } } },
           sets: { orderBy: { setNumber: "asc" } },
         },
       },
@@ -114,4 +114,3 @@ export async function requireOwnedTemplate(templateId: string) {
   if (!template) notFound();
   return { trainer, template };
 }
-

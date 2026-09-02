@@ -48,6 +48,8 @@ export type WorkoutExerciseView = {
   targets: TargetView[];
   /** Série už zapsané v databázi (např. po reloadu stránky). */
   loggedSets: { setNumber: number; weightKg: number; reps: number }[];
+  /** Jednotlivé série z posledního dokončeného tréninku tohoto cviku. */
+  lastSets: { setNumber: number; weightKg: number; reps: number }[];
   lastPerformance: { weightKg: number; reps: number; date: string } | null;
 };
 
@@ -405,11 +407,12 @@ export function WorkoutMode({
               )}
 
               {/* Hlavička tabulky — jednou na cvik. */}
-              <div className="mt-4 grid grid-cols-[2rem_1fr_1fr_2.75rem] items-center gap-2 px-1 text-sm font-semibold text-muted-foreground">
+              <div className="mt-4 grid grid-cols-[2.25rem_1.15fr_1fr_1fr_2.5rem] items-center gap-2 px-1 text-sm font-semibold text-muted-foreground">
                 <span>Série</span>
+                <span>Minule</span>
                 <span>{activeExercise.trackingType === "TIME" ? "Čas" : "Váha (kg)"}</span>
                 <span>{activeExercise.trackingType === "TIME" ? "" : "Opakování"}</span>
-                <span className="text-center">Hotovo</span>
+                <span className="text-center" aria-label="Hotovo">✓</span>
               </div>
 
               <div className="mt-1 flex flex-col">
@@ -418,6 +421,9 @@ export function WorkoutMode({
                     <SetRow
                       setNumber={target.setNumber}
                       value={getValue(activeExercise, target.setNumber)}
+                      previous={activeExercise.lastSets.find(
+                        (set) => set.setNumber === target.setNumber,
+                      )}
                       done={doneKeys.has(key(activeExercise.id, target.setNumber))}
                       isTimed={activeExercise.trackingType === "TIME"}
                       disabled={pending}
@@ -515,6 +521,7 @@ export function WorkoutMode({
 function SetRow({
   setNumber,
   value,
+  previous,
   done,
   isTimed,
   disabled,
@@ -526,6 +533,7 @@ function SetRow({
 }: {
   setNumber: number;
   value: RowValue;
+  previous?: RowValue;
   done: boolean;
   isTimed: boolean;
   disabled: boolean;
@@ -553,14 +561,16 @@ function SetRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[2rem_1fr_1fr_2.75rem] items-center gap-2 rounded-[var(--radius-button)] px-1 py-1.5 transition-colors",
-        done && "bg-primary/[0.05]",
+        "grid grid-cols-[2.25rem_1.15fr_1fr_1fr_2.5rem] items-center gap-2 rounded-[var(--radius-button)] border px-1.5 py-1.5 transition-colors",
+        done
+          ? "border-primary/60 bg-primary/20 shadow-[inset_3px_0_0_rgb(174_240_0)]"
+          : "border-transparent",
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "flex size-8 items-center justify-center rounded-full text-base font-bold",
+          "flex size-8 items-center justify-center rounded-[10px] text-base font-bold",
           done
             ? "border border-primary bg-transparent text-primary-strong"
             : "bg-primary text-primary-foreground",
@@ -568,6 +578,16 @@ function SetRow({
       >
         {setNumber}
       </span>
+
+      <p className="tabular min-w-0 text-center text-sm font-semibold text-muted-foreground">
+        {previous
+          ? isTimed
+            ? `${previous.reps} s`
+            : previous.weightKg > 0
+            ? `${formatFieldNumber(previous.weightKg)} kg × ${previous.reps}`
+            : `${previous.reps} op.`
+          : "—"}
+      </p>
 
       {isTimed ? (
         <label
@@ -596,7 +616,7 @@ function SetRow({
         <>
           <label
             className={cn(
-              "flex min-h-touch min-w-0 items-center justify-center rounded-full border-2 bg-surface-muted px-2 focus-within:border-primary",
+            "flex min-h-touch min-w-0 items-center justify-center rounded-full border-2 bg-surface-muted px-2 focus-within:border-primary",
               done ? "border-transparent" : "border-primary/65",
             )}
           >
@@ -644,23 +664,23 @@ function SetRow({
           disabled={disabled}
           aria-label={done ? `Série ${setNumber} — zrušit hotovo` : `Série ${setNumber} — dokončit`}
           className={cn(
-            "flex size-touch shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200",
+            "flex size-10 shrink-0 items-center justify-center rounded-[10px] border-2 transition-all duration-200",
             done
-              ? "scale-110 border-primary bg-primary shadow-[0_0_0_6px_rgb(174_240_0_/_0.2),0_4px_14px_rgb(95_133_0_/_0.3)]"
+              ? "border-primary bg-primary shadow-[0_0_0_3px_rgb(174_240_0_/_0.2)]"
               : "border-border bg-surface-muted hover:border-primary",
           )}
         >
           <Check
             aria-hidden="true"
             className={cn(
-              done ? "size-7 stroke-[3] text-primary-foreground" : "size-6 text-muted-foreground",
+              done ? "size-5 stroke-[3] text-primary-foreground" : "size-5 text-muted-foreground",
             )}
           />
         </button>
       </div>
 
       {canRemove && !done && (
-        <div className="col-span-4 flex justify-end">
+        <div className="col-span-5 flex justify-end">
           <button
             type="button"
             onClick={onRemove}

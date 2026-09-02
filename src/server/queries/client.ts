@@ -99,6 +99,58 @@ export async function getLastPerformance(
   return result;
 }
 
+/**
+ * Výsledky jednotlivých sérií z posledního dokončeného tréninku daného cviku.
+ * Nebereme poslední sérii napříč historií — pro sloupec „Minule“ musí všechny
+ * řádky patřit k jednomu minulému odcvičení, aby šly férově porovnat.
+ */
+export async function getLastSetPerformances(
+  clientId: string,
+  exerciseIds: string[],
+  excludeWorkoutId?: string,
+): Promise<Map<string, { weightKg: number; reps: number; date: Date }>> {
+  if (exerciseIds.length === 0) return new Map();
+
+  const sets = await db.workoutSet.findMany({
+    where: {
+      workoutExercise: {
+        exerciseId: { in: exerciseIds },
+        workout: {
+          clientId,
+          status: "COMPLETED",
+          ...(excludeWorkoutId ? { id: { not: excludeWorkoutId } } : {}),
+        },
+      },
+    },
+    orderBy: { completedAt: "desc" },
+    take: 500,
+    select: {
+      setNumber: true,
+      weightKg: true,
+      reps: true,
+      completedAt: true,
+      workoutExercise: { select: { exerciseId: true, workoutId: true } },
+    },
+  });
+
+  const latestWorkoutByExercise = new Map<string, string>();
+  const result = new Map<string, { weightKg: number; reps: number; date: Date }>();
+  for (const set of sets) {
+    const exerciseId = set.workoutExercise.exerciseId;
+    const workoutId = set.workoutExercise.workoutId;
+    const latestWorkout = latestWorkoutByExercise.get(exerciseId);
+    if (!latestWorkout) latestWorkoutByExercise.set(exerciseId, workoutId);
+    if (latestWorkout && latestWorkout !== workoutId) continue;
+
+    result.set(`${exerciseId}:${set.setNumber}`, {
+      weightKg: set.weightKg,
+      reps: set.reps,
+      date: set.completedAt,
+    });
+  }
+  return result;
+}
+
 /** Historie dokončených tréninků. */
 export async function getWorkoutHistory(clientId: string, take = 50) {
   return db.workout.findMany({

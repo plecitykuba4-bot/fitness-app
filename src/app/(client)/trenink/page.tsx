@@ -64,8 +64,8 @@ export default async function WorkoutHistoryPage() {
         </ul>
       )}
 
-      {history.length > 0 && <h2 className="mt-8 mb-3 text-2xl font-bold">Poslední tréninky</h2>}
-      {history.slice(0, 3).map((w) => (
+      {history.length > 0 && <h2 className="mt-8 mb-3 text-2xl font-bold">Historie tréninků</h2>}
+      {history.map((w) => (
         <Link key={w.id} href={`/trenink/${w.id}/souhrn`} className="mb-2 flex min-h-touch items-center justify-between gap-3 rounded-[var(--radius-button)] border border-primary/20 bg-surface-muted px-4 transition-colors hover:bg-primary/10">
           <span><span className="block font-semibold">{w.name}</span><span className="text-sm text-muted-foreground">{formatDate(w.startedAt)}</span></span>
           <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-primary-strong">
