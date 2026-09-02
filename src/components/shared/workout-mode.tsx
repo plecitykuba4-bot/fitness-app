@@ -7,9 +7,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  ImageIcon,
   Plus,
   Trash2,
-  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -103,7 +103,8 @@ export function WorkoutMode({
     afterSetNumber: number;
     seconds: number;
   } | null>(null);
-  const [openTechnique, setOpenTechnique] = useState<Set<string>>(new Set());
+  const [restOverrides, setRestOverrides] = useState<Record<string, number>>({});
+  const [openPhoto, setOpenPhoto] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -122,6 +123,9 @@ export function WorkoutMode({
     const target = exercise.targets.find((t) => t.setNumber === setNumber);
     return { reps: target?.reps ?? 10, weightKg: target?.targetWeight ?? 0 };
   };
+
+  const getRestSeconds = (exercise: WorkoutExerciseView) =>
+    restOverrides[exercise.id] ?? exercise.restSeconds;
 
   const markDone = (exercise: WorkoutExerciseView, target: TargetView) => {
     setError(null);
@@ -154,11 +158,12 @@ export function WorkoutMode({
     const remaining = exercise.targets.filter(
       (t) => t.setNumber !== target.setNumber && !doneKeys.has(key(exercise.id, t.setNumber)),
     );
-    if (exercise.restSeconds > 0 && remaining.length > 0) {
+    const restSeconds = getRestSeconds(exercise);
+    if (restSeconds > 0 && remaining.length > 0) {
       setResting({
         exerciseId: exercise.id,
         afterSetNumber: target.setNumber,
-        seconds: exercise.restSeconds,
+        seconds: restSeconds,
       });
     }
   };
@@ -309,10 +314,10 @@ export function WorkoutMode({
 
       {activeExercise ? (
         <>
-          <Card className="p-4">
+          <Card className="border-0 bg-transparent p-0 shadow-none">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xl font-bold tracking-tight text-foreground">
+                  <h2 className="text-xl font-bold tracking-tight text-primary-strong">
                     {activeExercise.name}
                   </h2>
 
@@ -348,66 +353,52 @@ export function WorkoutMode({
                 </Button>
               </div>
 
-              {(activeExercise.instructions || activeExercise.media.length > 0) && (
+              {(() => {
+                const photos = activeExercise.media.filter((media) => media.kind === "IMAGE");
+
+                return (
                 <>
                   <Button
                     type="button"
                     variant="secondary"
-                    block
-                    className="mt-3"
+                    className="mt-2 h-9 px-3 text-sm"
                     onClick={() =>
-                      setOpenTechnique((prev) => {
+                      setOpenPhoto((prev) => {
                         const next = new Set(prev);
                         if (next.has(activeExercise.id)) next.delete(activeExercise.id);
                         else next.add(activeExercise.id);
                         return next;
                       })
                     }
-                    aria-expanded={openTechnique.has(activeExercise.id)}
+                    aria-expanded={openPhoto.has(activeExercise.id)}
                   >
-                    <Video aria-hidden="true" />
-                    {openTechnique.has(activeExercise.id)
-                      ? "Skrýt techniku"
-                      : "Zobrazit techniku"}
+                    <ImageIcon aria-hidden="true" />
+                    {openPhoto.has(activeExercise.id) ? "Skrýt fotku" : "Fotka"}
                   </Button>
 
-                  {openTechnique.has(activeExercise.id) && (
-                    <Card className="mt-3 p-4">
-                      {activeExercise.instructions && (
-                        <p className="text-lg leading-relaxed">
-                          {activeExercise.instructions}
-                        </p>
-                      )}
-                      {activeExercise.media.map((m) => (
+                  {openPhoto.has(activeExercise.id) && (
+                    <Card className="mt-2 p-2">
+                      {photos.length > 0 ? photos.map((m) => (
                         <div key={m.storageKey} className="mt-4">
-                          {m.kind === "VIDEO" ? (
-                            <video
-                              controls
-                              preload="none"
-                              poster={m.posterKey ?? undefined}
-                              className="w-full rounded-[var(--radius-button)]"
-                            >
-                              <source src={m.storageKey} />
-                              Váš prohlížeč neumí přehrát toto video.
-                            </video>
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={m.storageKey}
-                              alt={`Technika cviku ${activeExercise.name}`}
-                              loading="lazy"
-                              className="w-full rounded-[var(--radius-button)]"
-                            />
-                          )}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={m.storageKey}
+                            alt={`Fotka cviku ${activeExercise.name}`}
+                            loading="lazy"
+                            className="w-full rounded-[var(--radius-button)]"
+                          />
                         </div>
-                      ))}
+                      )) : (
+                        <p className="p-2 text-sm text-muted-foreground">Fotka k tomuto cviku zatím není nahraná.</p>
+                      )}
                     </Card>
                   )}
                 </>
-              )}
+                );
+              })()}
 
               {/* Hlavička tabulky — jednou na cvik. */}
-              <div className="mt-4 grid grid-cols-[2.25rem_1.15fr_1fr_1fr_2.5rem] items-center gap-2 px-1 text-sm font-semibold text-muted-foreground">
+              <div className="mt-3 grid grid-cols-[2rem_1.15fr_1fr_1fr_2.25rem] items-center gap-1.5 px-1 text-xs font-semibold text-muted-foreground">
                 <span>Série</span>
                 <span>Minule</span>
                 <span>{activeExercise.trackingType === "TIME" ? "Čas" : "Váha (kg)"}</span>
@@ -438,12 +429,18 @@ export function WorkoutMode({
 
                     {i < activeExercise.targets.length - 1 && (
                       <RestSeparator
-                        seconds={activeExercise.restSeconds}
+                        seconds={getRestSeconds(activeExercise)}
                         active={
                           resting?.exerciseId === activeExercise.id &&
                           resting.afterSetNumber === target.setNumber
                         }
                         onSkip={() => setResting(null)}
+                        onChangeSeconds={(seconds) =>
+                          setRestOverrides((previous) => ({
+                            ...previous,
+                            [activeExercise.id]: seconds,
+                          }))
+                        }
                       />
                     )}
                   </div>
@@ -454,7 +451,7 @@ export function WorkoutMode({
                 type="button"
                 variant="secondary"
                 block
-                className="mt-3"
+                className="mt-3 h-10 border-0 bg-surface-muted text-sm shadow-none"
                 disabled={pending}
                 onClick={() => addSet(activeExercise)}
               >
@@ -561,16 +558,16 @@ function SetRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[2.25rem_1.15fr_1fr_1fr_2.5rem] items-center gap-2 rounded-[var(--radius-button)] border px-1.5 py-1.5 transition-colors",
+        "group relative grid grid-cols-[2rem_1.15fr_1fr_1fr_2.25rem] items-center gap-1.5 rounded-[10px] border px-1 py-1 transition-colors",
         done
           ? "border-primary/60 bg-primary/20 shadow-[inset_3px_0_0_rgb(174_240_0)]"
-          : "border-transparent",
+          : "border-transparent bg-transparent",
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "flex size-8 items-center justify-center rounded-[10px] text-base font-bold",
+          "flex h-7 w-8 items-center justify-center rounded-[8px] text-sm font-bold",
           done
             ? "border border-primary bg-transparent text-primary-strong"
             : "bg-primary text-primary-foreground",
@@ -579,7 +576,7 @@ function SetRow({
         {setNumber}
       </span>
 
-      <p className="tabular min-w-0 text-center text-sm font-semibold text-muted-foreground">
+      <p className="tabular flex min-h-9 min-w-0 items-center justify-center rounded-[8px] bg-surface-muted px-1 text-center text-xs font-semibold text-muted-foreground">
         {previous
           ? isTimed
             ? `${previous.reps} s`
@@ -593,7 +590,7 @@ function SetRow({
         <label
           className={cn(
             "col-span-2 flex min-h-touch min-w-0 items-center justify-center rounded-[var(--radius-button)] border-2 bg-surface-muted px-3 focus-within:border-primary",
-            done ? "border-transparent" : "border-primary/65",
+          done ? "border-transparent" : "border-transparent",
           )}
         >
           <input
@@ -616,8 +613,8 @@ function SetRow({
         <>
           <label
             className={cn(
-            "flex min-h-touch min-w-0 items-center justify-center rounded-full border-2 bg-surface-muted px-2 focus-within:border-primary",
-              done ? "border-transparent" : "border-primary/65",
+            "flex min-h-9 min-w-0 items-center justify-center rounded-[8px] border-2 bg-surface-muted px-1.5 focus-within:border-primary",
+              done ? "border-transparent" : "border-transparent",
             )}
           >
             <input
@@ -632,7 +629,7 @@ function SetRow({
               onBlur={commitWeight}
               onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
               aria-label={`Série ${setNumber} — váha v kg`}
-              className="tabular min-w-0 flex-1 bg-transparent text-right text-lg font-bold text-foreground focus:outline-none"
+              className="tabular min-w-0 flex-1 bg-transparent text-right text-base font-bold text-foreground focus:outline-none"
             />
             <span aria-hidden="true" className="ml-1 shrink-0 text-lg font-bold text-foreground">kg</span>
           </label>
@@ -650,8 +647,8 @@ function SetRow({
             onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
             aria-label={`Série ${setNumber} — počet opakování`}
             className={cn(
-              "tabular min-h-touch w-full rounded-[var(--radius-button)] border-2 px-2 text-center text-lg font-bold focus:border-primary focus:outline-none",
-              done ? "border-transparent bg-surface-muted" : "border-primary/65 bg-surface-muted",
+              "tabular min-h-9 w-full rounded-[8px] border-2 px-1 text-center text-base font-bold focus:border-primary focus:outline-none",
+              done ? "border-transparent bg-surface-muted" : "border-transparent bg-surface-muted",
             )}
           />
         </>
@@ -664,7 +661,7 @@ function SetRow({
           disabled={disabled}
           aria-label={done ? `Série ${setNumber} — zrušit hotovo` : `Série ${setNumber} — dokončit`}
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-[10px] border-2 transition-all duration-200",
+            "flex size-9 shrink-0 items-center justify-center rounded-[8px] border-2 transition-all duration-200",
             done
               ? "border-primary bg-primary shadow-[0_0_0_3px_rgb(174_240_0_/_0.2)]"
               : "border-border bg-surface-muted hover:border-primary",
@@ -680,16 +677,16 @@ function SetRow({
       </div>
 
       {canRemove && !done && (
-        <div className="col-span-5 flex justify-end">
+        <div className="absolute -right-3 top-1/2 -translate-y-1/2">
           <button
             type="button"
             onClick={onRemove}
             disabled={disabled}
             aria-label={`Odebrat sérii ${setNumber}`}
-            className="flex items-center gap-1 px-2 py-1 text-sm font-semibold text-muted-foreground hover:text-danger"
+            className="flex size-6 items-center justify-center rounded-full bg-surface text-muted-foreground opacity-60 transition-opacity hover:text-danger focus:opacity-100 group-hover:opacity-100"
           >
             <Trash2 aria-hidden="true" className="size-4" />
-            Odebrat sérii
+            <span className="sr-only">Odebrat sérii</span>
           </button>
         </div>
       )}

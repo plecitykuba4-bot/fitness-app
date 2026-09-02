@@ -142,22 +142,23 @@ function ExerciseRow({
           <ExerciseImageUpload exerciseId={item.exerciseId} imageUrl={item.imageUrl} />
 
           {editing ? (
-            <div className="mt-4 flex flex-col gap-4">
-              <p className="text-lg font-semibold">Série</p>
+            <div className="mt-3 flex flex-col gap-3">
+              <p className="text-base font-semibold">Série</p>
 
-              <ul className="flex flex-col gap-3">
+              <ul className="-ml-7 flex w-[calc(100%+1.75rem)] flex-col gap-2">
                 {draft.map((set, i) => (
                   <li
                     key={i}
-                    className="rounded-[var(--radius-button)] bg-surface p-3"
+                    className="rounded-[10px] bg-surface p-3"
                   >
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-base font-semibold text-muted-foreground">
+                      <span className="text-sm font-semibold text-muted-foreground">
                         Série {i + 1}
                       </span>
                       <Button
                         type="button"
                         variant="ghost"
+                        className="h-8 min-h-0 gap-1 px-2 text-sm [&_svg]:size-4"
                         disabled={draft.length <= 1}
                         onClick={() => removeSet(i)}
                       >
@@ -166,9 +167,9 @@ function ExerciseRow({
                       </Button>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className={item.trackingType === "TIME" ? "grid gap-2" : "grid grid-cols-2 gap-2"}>
                       <label>
-                        <span className="mb-1 block text-base font-semibold">
+                        <span className="mb-1 block text-sm font-semibold">
                           {item.trackingType === "TIME" ? "Výdrž (sekundy)" : "Opakování"}
                         </span>
                         <Input
@@ -177,11 +178,12 @@ function ExerciseRow({
                           min={1}
                           max={item.trackingType === "TIME" ? 3600 : 100}
                           value={set.reps}
+                          className="h-10 min-h-0 px-3 text-sm"
                           onChange={(e) => updateSet(i, { reps: e.target.value })}
                         />
                       </label>
                       {item.trackingType !== "TIME" && <label>
-                        <span className="mb-1 block text-base font-semibold">
+                        <span className="mb-1 block text-sm font-semibold">
                           Váha (kg)
                         </span>
                         <Input
@@ -192,6 +194,7 @@ function ExerciseRow({
                           step={2.5}
                           value={set.weight}
                           placeholder="vlastní váha"
+                          className="h-10 min-h-0 px-3 text-sm"
                           onChange={(e) => updateSet(i, { weight: e.target.value })}
                         />
                       </label>}
@@ -200,14 +203,14 @@ function ExerciseRow({
                 ))}
               </ul>
 
-              <Button type="button" variant="secondary" block onClick={addSet}>
+              <Button className="-ml-7 h-10 min-h-0 w-[calc(100%+1.75rem)] text-sm" type="button" variant="secondary" block onClick={addSet}>
                 <Plus aria-hidden="true" />
                 Přidat sérii
               </Button>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="-ml-7 grid w-[calc(100%+1.75rem)] grid-cols-2 gap-2">
                 <label>
-                  <span className="mb-1 block text-lg font-semibold">
+                  <span className="mb-1 block text-sm font-semibold">
                     Pauza (s)
                   </span>
                   <Input
@@ -217,16 +220,18 @@ function ExerciseRow({
                     max={600}
                     step={15}
                     value={rest}
+                    className="h-10 min-h-0 px-3 text-sm"
                     onChange={(e) => setRest(e.target.value)}
                   />
                 </label>
                 <label>
-                  <span className="mb-1 block text-lg font-semibold">
+                  <span className="mb-1 block text-sm font-semibold">
                     Poznámka
                   </span>
                   <Input
                     value={note}
                     placeholder="Nepovinné."
+                    className="h-10 min-h-0 px-3 text-sm"
                     onChange={(e) => setNote(e.target.value)}
                   />
                 </label>
@@ -242,14 +247,15 @@ function ExerciseRow({
                 </p>
               )}
 
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={save} disabled={pending}>
+              <div className="-ml-7 flex w-[calc(100%+1.75rem)] gap-2">
+                <Button className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4" type="button" onClick={save} disabled={pending}>
                   <Check aria-hidden="true" />
                   {pending ? "Ukládám…" : "Uložit změny"}
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
+                  className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4"
                   onClick={cancel}
                   disabled={pending}
                 >
@@ -261,11 +267,11 @@ function ExerciseRow({
           ) : (
             <>
               {/* Série jako samostatné řádky — u pyramidy se váhy liší. */}
-              <ul className="mt-2 flex flex-col gap-1">
+              <ul className="-ml-7 mt-2 flex w-[calc(100%+1.75rem)] flex-col gap-1.5">
                 {item.sets.map((set) => (
                   <li
                     key={set.setNumber}
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-button)] bg-surface px-3 py-2"
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-[10px] bg-surface px-3 py-2"
                   >
                     <span className="text-base font-semibold text-muted-foreground">
                       Série {set.setNumber}
@@ -293,12 +299,13 @@ function ExerciseRow({
       </div>
 
       {!editing && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button type="button" onClick={() => setEditing(true)} disabled={pending}>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Button className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4" type="button" onClick={() => setEditing(true)} disabled={pending}>
             <Pencil aria-hidden="true" />
             Upravit
           </Button>
           <Button
+            className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4"
             type="button"
             variant="secondary"
             disabled={isFirst || pending}
@@ -310,6 +317,7 @@ function ExerciseRow({
             Nahoru
           </Button>
           <Button
+            className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4"
             type="button"
             variant="secondary"
             disabled={isLast || pending}
@@ -321,6 +329,7 @@ function ExerciseRow({
             Dolů
           </Button>
           <Button
+            className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4"
             type="button"
             variant="danger"
             disabled={pending}

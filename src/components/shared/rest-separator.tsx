@@ -12,14 +12,18 @@ export function RestSeparator({
   seconds,
   active,
   onSkip,
+  onChangeSeconds,
 }: {
   seconds: number;
   active: boolean;
   onSkip: () => void;
+  onChangeSeconds: (seconds: number) => void;
 }) {
   const endsAtRef = useRef(0);
   const vibratedRef = useRef(false);
   const [remaining, setRemaining] = useState(seconds);
+  const [editing, setEditing] = useState(false);
+  const [draftSeconds, setDraftSeconds] = useState(String(seconds));
 
   useEffect(() => {
     if (!active) return;
@@ -43,12 +47,41 @@ export function RestSeparator({
 
   if (!active) {
     return (
-      <div className="flex items-center gap-3 py-1.5" aria-hidden="true">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-sm text-muted-foreground">
-          Pauza {formatCountdown(seconds)}
-        </span>
-        <span className="h-px flex-1 bg-border" />
+      <div className="flex items-center gap-3 py-1.5">
+        <span className="h-px flex-1 bg-sky-200" />
+        {editing ? (
+          <input
+            autoFocus
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={3600}
+            value={draftSeconds}
+            aria-label="Délka pauzy v sekundách"
+            onChange={(event) => setDraftSeconds(event.target.value)}
+            onBlur={() => {
+              const next = Math.max(0, Math.min(3600, Math.round(Number(draftSeconds) || 0)));
+              onChangeSeconds(next);
+              setDraftSeconds(String(next));
+              setEditing(false);
+            }}
+            onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+            className="w-16 rounded border border-primary bg-surface-muted px-1 py-0.5 text-center text-sm font-semibold focus:outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDraftSeconds(String(seconds));
+              setEditing(true);
+            }}
+            className="text-sm font-semibold text-sky-500 underline-offset-2 hover:text-sky-600 hover:underline"
+            aria-label={`Pauza ${formatCountdown(seconds)}. Klepnutím upravit.`}
+          >
+            Pauza {formatCountdown(seconds)}
+          </button>
+        )}
+        <span className="h-px flex-1 bg-sky-200" />
       </div>
     );
   }

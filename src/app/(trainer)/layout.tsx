@@ -40,7 +40,7 @@ export default async function TrainerLayout({
         unreadCount={unread}
       />
       {/* Odsazení zdola, aby spodní navigace nepřekrývala obsah. */}
-      <main className="px-4 py-4 pb-28 md:pb-10">{children}</main>
+      <main className="px-3 py-3 pb-28 md:px-4 md:py-4 md:pb-10">{children}</main>
     </div>
   );
 }
