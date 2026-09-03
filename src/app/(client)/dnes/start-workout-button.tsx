@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CircleAlert, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startWorkoutAction } from "@/server/actions/workout";
 
 export function StartWorkoutButton({ templateId }: { templateId: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -17,13 +15,10 @@ export function StartWorkoutButton({ templateId }: { templateId: string }) {
       const result = await startWorkoutAction(templateId);
       if (result.ok) {
         const href = `/trenink/${result.data.workoutId}`;
-        // Bezplatný tunel neumí spolehlivě přenést Next.js klientskou
-        // navigaci. Běžné načtení stránky je pro ukázku spolehlivé.
-        if (window.location.hostname.endsWith(".serveousercontent.com")) {
-          window.location.assign(href);
-        } else {
-          router.push(href);
-        }
+        // Po založení tréninku vždy načteme jeho URL znovu ze serveru.
+        // Zabrání to tomu, aby mobilní prohlížeč ukázal starý RSC stav
+        // předchozího (už dokončeného) tréninku.
+        window.location.assign(href);
       } else {
         setError(result.error);
       }

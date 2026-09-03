@@ -406,12 +406,12 @@ export function WorkoutMode({
               })()}
 
               {/* Hlavička tabulky — jednou na cvik. */}
-              <div className="mt-3 grid grid-cols-[2rem_1.15fr_1fr_1fr_2.25rem] items-center gap-1.5 px-1 text-xs font-semibold text-muted-foreground">
+              <div className="mt-3 grid grid-cols-[2rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_2.35rem] items-center gap-1.5 px-1 text-xs font-semibold text-muted-foreground">
                 <span>Série</span>
                 <span>Minule</span>
                 <span>{activeExercise.trackingType === "TIME" ? "Čas" : "Váha (kg)"}</span>
                 <span>{activeExercise.trackingType === "TIME" ? "" : "Opakování"}</span>
-                <span className="text-center" aria-label="Hotovo">✓</span>
+                <span className="text-center" aria-label="Hotovo a odebrat">✓</span>
               </div>
 
               <div className="mt-1 flex flex-col">
@@ -542,7 +542,7 @@ function SetRow({
   return (
     <div
       className={cn(
-        "group relative grid grid-cols-[2rem_1.15fr_1fr_1fr_2.25rem] items-center gap-1.5 rounded-[10px] border px-1 py-1 transition-colors",
+        "grid grid-cols-[2rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_2.35rem] items-center gap-1.5 rounded-[10px] border px-1 py-1 transition-colors",
         done
           ? "border-primary/60 bg-primary/20 shadow-[inset_3px_0_0_rgb(174_240_0)]"
           : "border-transparent bg-transparent",
@@ -638,14 +638,14 @@ function SetRow({
         </>
       )}
 
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex flex-col items-center justify-center gap-0.5 py-0.5">
         <button
           type="button"
           onClick={done ? onUndo : onComplete}
           disabled={disabled}
           aria-label={done ? `Série ${setNumber} — zrušit hotovo` : `Série ${setNumber} — dokončit`}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[8px] border-2 transition-all duration-200",
+            "flex size-7 shrink-0 items-center justify-center rounded-[7px] border-2 transition-all duration-200",
             done
               ? "border-primary bg-primary shadow-[0_0_0_3px_rgb(174_240_0_/_0.2)]"
               : "border-border bg-surface-muted hover:border-primary",
@@ -654,26 +654,23 @@ function SetRow({
           <Check
             aria-hidden="true"
             className={cn(
-              done ? "size-5 stroke-[3] text-primary-foreground" : "size-5 text-muted-foreground",
+              done ? "size-4 stroke-[3] text-primary-foreground" : "size-4 text-muted-foreground",
             )}
           />
         </button>
-      </div>
-
-      {canRemove && !done && (
-        <div className="absolute -right-3 top-1/2 -translate-y-1/2">
+        {canRemove && !done && (
           <button
             type="button"
             onClick={onRemove}
             disabled={disabled}
             aria-label={`Odebrat sérii ${setNumber}`}
-            className="flex size-6 items-center justify-center rounded-full bg-surface text-muted-foreground opacity-60 transition-opacity hover:text-danger focus:opacity-100 group-hover:opacity-100"
+            className="flex size-5 items-center justify-center rounded-[6px] border border-border bg-surface text-muted-foreground transition-colors hover:border-danger hover:text-danger focus:border-danger focus:text-danger"
           >
-            <Trash2 aria-hidden="true" className="size-4" />
+            <Trash2 aria-hidden="true" className="size-3.5" />
             <span className="sr-only">Odebrat sérii</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
