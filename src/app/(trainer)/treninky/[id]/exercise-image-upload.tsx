@@ -11,13 +11,37 @@ export function ExerciseImageUpload({ exerciseId, imageUrl }: { exerciseId: stri
   const [uploading, setUploading] = useState(false);
   const upload = async (file?: File) => {
     if (!file) return;
-    setUploading(true); setMessage(null);
-    const data = new FormData(); data.set("image", file);
-    const response = await fetch(`/api/exercises/${exerciseId}/image`, { method: "POST", body: data });
-    const result = await response.json().catch(() => ({}));
-    setUploading(false);
-    if (!response.ok) { setMessage(result.error ?? "Fotku se nepodařilo nahrát."); return; }
-    setMessage("Fotka je uložená a uvidí ji i klient."); router.refresh();
+    if (file.size > 15 * 1024 * 1024) {
+      setMessage("Fotka je příliš velká. Vyberte fotografii do 15 MB.");
+      return;
+    }
+
+    setUploading(true);
+    setMessage(null);
+    try {
+      const data = new FormData();
+      data.set("image", file);
+      const response = await fetch(`/api/exercises/${exerciseId}/image`, {
+        method: "POST",
+        body: data,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMessage(
+          response.status === 413
+            ? "Fotka je příliš velká. Vyberte fotografii do 15 MB."
+            : result.error ?? "Fotku se nepodařilo nahrát.",
+        );
+        return;
+      }
+      setMessage("Fotka je uložená a uvidí ji i klient.");
+      router.refresh();
+    } catch {
+      setMessage("Nahrávání se přerušilo. Zkontrolujte připojení a zkuste to znovu.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
   };
   return (
     <div className="-ml-6 mt-2 w-[calc(100%+1.5rem)] rounded-[var(--radius-button)] border border-border bg-surface p-2">

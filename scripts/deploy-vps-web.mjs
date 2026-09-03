@@ -25,6 +25,9 @@ writeFileSync(
   listen [::]:80 default_server;
   server_name _;
 
+  # Rezerva pro multipart obálku kolem fotografie; aplikace samotná povolí 15 MB.
+  client_max_body_size 20M;
+
   location / {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;

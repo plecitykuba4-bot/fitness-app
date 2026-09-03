@@ -6,7 +6,9 @@ import { db } from "@/server/db";
 
 export const runtime = "nodejs";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Moderní fotky z iPhonu mívají několik MB. Nginx má pro tuto cestu
+// nastaveno 20 MB, takže s rezervou přijmeme samotnou fotku do 15 MB.
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -37,7 +39,7 @@ export async function POST(
     return Response.json({ error: "Vyberte fotku z galerie." }, { status: 400 });
   }
   if (file.size > MAX_IMAGE_BYTES || !EXTENSIONS[file.type]) {
-    return Response.json({ error: "Nahrajte fotku JPG, PNG, WEBP nebo HEIC do 5 MB." }, { status: 400 });
+    return Response.json({ error: "Nahrajte fotku JPG, PNG, WEBP nebo HEIC do 15 MB." }, { status: 400 });
   }
 
   const directory = path.join(process.cwd(), "public", "uploads", "exercises");
