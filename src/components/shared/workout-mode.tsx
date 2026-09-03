@@ -4,8 +4,6 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
-  ChevronLeft,
-  ChevronRight,
   CircleAlert,
   ImageIcon,
   Plus,
@@ -89,14 +87,6 @@ export function WorkoutMode({
   const [doneKeys, setDoneKeys] = useState<Set<string>>(
     () => new Set(initialDoneKeys(exercises)),
   );
-  const [activeIndex, setActiveIndex] = useState(() => {
-    const firstIncomplete = exercises.findIndex((exercise) =>
-      exercise.targets.some(
-        (target) => !exercise.loggedSets.some((set) => set.setNumber === target.setNumber),
-      ),
-    );
-    return firstIncomplete < 0 ? Math.max(exercises.length - 1, 0) : firstIncomplete;
-  });
   const [overrides, setOverrides] = useState<Record<string, RowValue>>({});
   const [resting, setResting] = useState<{
     exerciseId: string;
@@ -108,10 +98,14 @@ export function WorkoutMode({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const activeExercise = exercises[activeIndex];
-  const exerciseProgress = exercises.length === 0
-    ? 0
-    : ((activeIndex + 1) / exercises.length) * 100;
+  const totalSets = exercises.reduce((total, exercise) => total + exercise.targets.length, 0);
+  const completedSets = exercises.reduce(
+    (total, exercise) => total + exercise.targets.filter((target) =>
+      doneKeys.has(key(exercise.id, target.setNumber)),
+    ).length,
+    0,
+  );
+  const exerciseProgress = totalSets === 0 ? 0 : (completedSets / totalSets) * 100;
 
   const getValue = (exercise: WorkoutExerciseView, setNumber: number): RowValue => {
     const k = key(exercise.id, setNumber);
@@ -281,7 +275,7 @@ export function WorkoutMode({
         </div>
         <div className="mt-1 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-muted-foreground">
-            Cvik <span className="text-primary-strong">{Math.min(activeIndex + 1, exercises.length)}</span> z {exercises.length}
+            Hotovo <span className="text-primary-strong">{completedSets}</span> z {totalSets} sérií
           </p>
           <Button
             type="button"
@@ -312,9 +306,10 @@ export function WorkoutMode({
         </p>
       )}
 
-      {activeExercise ? (
-        <>
-          <Card className="border-0 bg-transparent p-0 shadow-none">
+      {exercises.length > 0 ? (
+        <div className="flex flex-col gap-7">
+          {exercises.map((activeExercise) => (
+          <Card key={activeExercise.id} className="border-0 bg-transparent p-0 shadow-none">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-bold tracking-tight text-primary-strong">
@@ -472,32 +467,8 @@ export function WorkoutMode({
                 Přidat sérii
               </Button>
           </Card>
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={activeIndex === 0}
-              onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
-            >
-              <ChevronLeft aria-hidden="true" />
-              Předchozí cvik
-            </Button>
-            <Button
-              type="button"
-              disabled={activeIndex >= exercises.length - 1}
-              onClick={() => setActiveIndex((index) => Math.min(exercises.length - 1, index + 1))}
-            >
-              Další cvik
-              <ChevronRight aria-hidden="true" />
-            </Button>
-          </div>
-          {activeIndex < exercises.length - 1 && (
-            <p className="mt-3 text-center text-sm text-muted-foreground">
-              Další: <span className="font-semibold text-foreground">{exercises[activeIndex + 1]?.name}</span>
-            </p>
-          )}
-        </>
+          ))}
+        </div>
       ) : (
         <Card className="p-5 text-center text-muted-foreground">
           V tréninku zatím není žádný cvik.
