@@ -355,6 +355,7 @@ export function WorkoutMode({
 
               {(() => {
                 const photos = activeExercise.media.filter((media) => media.kind === "IMAGE");
+                const videos = activeExercise.media.filter((media) => media.kind === "VIDEO");
 
                 return (
                 <>
@@ -373,12 +374,12 @@ export function WorkoutMode({
                     aria-expanded={openPhoto.has(activeExercise.id)}
                   >
                     <ImageIcon aria-hidden="true" />
-                    {openPhoto.has(activeExercise.id) ? "Skrýt fotku" : "Fotka"}
+                    {openPhoto.has(activeExercise.id) ? "Skrýt techniku" : "Foto / video"}
                   </Button>
 
                   {openPhoto.has(activeExercise.id) && (
                     <Card className="mt-2 p-2">
-                      {photos.length > 0 ? photos.map((m) => (
+                      {photos.map((m) => (
                         <div key={m.storageKey} className="mt-4">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -388,8 +389,20 @@ export function WorkoutMode({
                             className="w-full rounded-[var(--radius-button)]"
                           />
                         </div>
-                      )) : (
-                        <p className="p-2 text-sm text-muted-foreground">Fotka k tomuto cviku zatím není nahraná.</p>
+                      ))}
+                      {videos.map((m) => (
+                        <video
+                          key={m.storageKey}
+                          src={m.storageKey}
+                          poster={m.posterKey ?? undefined}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="mt-4 w-full rounded-[var(--radius-button)]"
+                        />
+                      ))}
+                      {photos.length === 0 && videos.length === 0 && (
+                        <p className="p-2 text-sm text-muted-foreground">Technika k tomuto cviku zatím není nahraná.</p>
                       )}
                     </Card>
                   )}
