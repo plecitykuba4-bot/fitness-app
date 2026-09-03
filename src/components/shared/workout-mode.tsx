@@ -309,7 +309,7 @@ export function WorkoutMode({
       {exercises.length > 0 ? (
         <div className="flex flex-col gap-7">
           {exercises.map((activeExercise) => (
-          <Card key={activeExercise.id} className="border-0 bg-transparent p-0 shadow-none">
+          <Card key={activeExercise.id} className="border-0 bg-transparent px-2 py-0 shadow-none">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-bold tracking-tight text-primary-strong">
