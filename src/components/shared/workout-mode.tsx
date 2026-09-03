@@ -262,7 +262,7 @@ export function WorkoutMode({
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="mx-auto w-full max-w-xl px-1 pb-[calc(8rem+env(safe-area-inset-bottom))] md:px-0 md:pb-0">
       {/* Časovač a tlačítko ukončení zůstávají viditelné po celý trénink. */}
       <div className="sticky top-[var(--app-top-offset)] z-30 -mx-5 mb-5 border-b border-border bg-background/95 px-5 py-3 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-3">
