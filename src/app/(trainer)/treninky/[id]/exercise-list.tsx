@@ -227,15 +227,14 @@ function ExerciseRow({
                           Váha (kg)
                         </span>
                         <Input
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          min={0}
-                          max={500}
-                          step={2.5}
                           value={set.weight}
                           placeholder="vlastní váha"
                           className="h-9 min-h-0 px-3 text-sm"
-                          onChange={(e) => updateSet(i, { weight: e.target.value })}
+                          onChange={(e) =>
+                            updateSet(i, { weight: normalizeDecimalInput(e.target.value) })
+                          }
                         />
                       </label>}
                     </div>
@@ -393,4 +392,12 @@ function ExerciseRow({
 
 function parseDecimal(value: string): number {
   return Number(value.replace(",", "."));
+}
+
+function normalizeDecimalInput(value: string): string {
+  const normalized = value.replace(".", ",").replace(/[^0-9,]/g, "");
+  const [whole = "", ...decimalParts] = normalized.split(",");
+  return decimalParts.length > 0
+    ? `${whole},${decimalParts.join("")}`
+    : whole;
 }

@@ -625,7 +625,7 @@ function SetRow({
               max={500}
               value={weightText}
               disabled={disabled}
-              onChange={(e) => setWeightText(e.target.value)}
+              onChange={(e) => setWeightText(normalizeDecimalInput(e.target.value))}
               onBlur={commitWeight}
               onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
               aria-label={`Série ${setNumber} — váha v kg`}
@@ -703,6 +703,15 @@ function parseFieldNumber(text: string): number {
   const n = Number(text.replace(",", "."));
   if (Number.isNaN(n) || n < 0) return 0;
   return Math.round(n * 100) / 100;
+}
+
+/** Povolí českou čárku i tečku a během psaní zachová nedokončené „7,“ . */
+function normalizeDecimalInput(text: string): string {
+  const normalized = text.replace(".", ",").replace(/[^0-9,]/g, "");
+  const [whole = "", ...decimalParts] = normalized.split(",");
+  return decimalParts.length > 0
+    ? `${whole},${decimalParts.join("")}`
+    : whole;
 }
 
 /** Přidání dalšího cviku do rozcvičeného tréninku. */
