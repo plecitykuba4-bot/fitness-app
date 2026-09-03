@@ -618,7 +618,7 @@ function SetRow({
             )}
           >
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               step={2.5}
               min={0}
@@ -696,7 +696,7 @@ function SetRow({
 
 function formatFieldNumber(value: number): string {
   if (value <= 0) return "";
-  return Number.isInteger(value) ? String(value) : String(value);
+  return Number.isInteger(value) ? String(value) : value.toLocaleString("cs-CZ");
 }
 
 function parseFieldNumber(text: string): number {
@@ -716,6 +716,7 @@ function AddExerciseCard({
   onAdd: (exerciseId: string) => void;
 }) {
   const [selected, setSelected] = useState("");
+  const [selectResetKey, setSelectResetKey] = useState(0);
   const categories = [...new Set(exercises.map((exercise) => exercise.category))];
 
   if (exercises.length === 0) return null;
@@ -731,6 +732,7 @@ function AddExerciseCard({
             emptyLabel="Žádný cvik neodpovídá"
             categories={categories}
             onValueChange={setSelected}
+            resetKey={selectResetKey}
             options={exercises.map((exercise) => ({
               value: exercise.id,
               label: exercise.name,
@@ -747,6 +749,7 @@ function AddExerciseCard({
             if (selected) {
               onAdd(selected);
               setSelected("");
+              setSelectResetKey((key) => key + 1);
             }
           }}
         >

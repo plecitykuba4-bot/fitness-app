@@ -16,10 +16,10 @@ export default async function TemplateDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ navrat?: string }>;
+  searchParams: Promise<{ navrat?: string; edit?: string }>;
 }) {
   const { id } = await params;
-  const { navrat } = await searchParams;
+  const { navrat, edit } = await searchParams;
   const { trainer, template } = await requireOwnedTemplate(id);
 
   const backHref = navrat && navrat.startsWith("/") ? navrat : "/treninky";
@@ -65,7 +65,7 @@ export default async function TemplateDetailPage({
         {template.estimatedMin ? ` · ${template.estimatedMin} min` : ""}
       </p>
 
-      <Card>
+      <Card id="cviky">
         <CardHeader>
           <CardTitle>
             Cviky v tréninku ({template.exercises.length})
@@ -87,6 +87,7 @@ export default async function TemplateDetailPage({
               })),
               trackingType: item.exercise.trackingType,
             }))}
+            autoEditId={edit}
           />
         </CardContent>
       </Card>

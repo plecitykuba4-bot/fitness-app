@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ export function SearchableSelect({
   categories,
   alwaysOpen = false,
   onValueChange,
+  resetKey,
 }: {
   id?: string;
   name?: string;
@@ -32,6 +33,8 @@ export function SearchableSelect({
   categories?: string[];
   alwaysOpen?: boolean;
   onValueChange?: (value: string) => void;
+  /** Změna klíče vyčistí text i vybranou položku (např. po přidání cviku). */
+  resetKey?: string | number;
 }) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -48,6 +51,14 @@ export function SearchableSelect({
   const [hasSelection, setHasSelection] = useState(Boolean(initial));
   const [category, setCategory] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (resetKey === undefined) return;
+    setValue("");
+    setQuery("");
+    setHasSelection(false);
+    setOpen(false);
+  }, [resetKey]);
 
   const normalized = query.trim().toLocaleLowerCase("cs");
   const filtered = options.filter(
@@ -116,7 +127,14 @@ export function SearchableSelect({
           aria-autocomplete="list"
           aria-expanded={open || (alwaysOpen && !hasSelection)}
           aria-controls={listId}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            // Na mobilu zvedne pole nad softwarovou klávesnici. Výběr i
+            // tlačítka pod ním tak nezůstanou schované za spodním okrajem.
+            requestAnimationFrame(() =>
+              inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+            );
+          }}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -133,7 +151,7 @@ export function SearchableSelect({
             id={listId}
             role="listbox"
             className={cn(
-              "inset-x-0 z-30 max-h-72 overflow-y-auto rounded-[var(--radius-button)] border border-border bg-surface p-1 shadow-2xl",
+              "inset-x-0 z-30 max-h-[min(18rem,calc(100dvh-12rem))] overscroll-contain overflow-y-auto rounded-[var(--radius-button)] border border-border bg-surface p-1 shadow-2xl",
               alwaysOpen
                 ? "relative mt-2 shadow-sm"
                 : "absolute top-[calc(100%+0.35rem)]",

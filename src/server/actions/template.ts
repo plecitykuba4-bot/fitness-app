@@ -200,7 +200,7 @@ export async function addTemplateExerciseAction(
     exerciseId: formData.get("exerciseId"),
     sets: Number(formData.get("sets")),
     reps: Number(formData.get("reps")),
-    targetWeight: rawWeight ? Number(rawWeight) : null,
+    targetWeight: rawWeight ? Number(String(rawWeight).replace(",", ".")) : null,
     restSeconds: Number(formData.get("restSeconds")),
     note: formData.get("note") || undefined,
   });
@@ -261,12 +261,63 @@ export async function addTemplateExerciseAction(
 }
 
 /**
+ * Rychlé vložení cviku do plánu. Detail sérií se upravuje až přímo v jeho
+ * řádku — trenér proto hodnoty nezadává dvakrát ve dvou různých formulářích.
+ */
+export async function quickAddTemplateExerciseAction(
+  templateId: string,
+  exerciseId: string,
+): Promise<{ ok: true; itemId: string } | { ok: false; error: string }> {
+  const trainer = await requireTrainer();
+
+  const [template, exercise] = await Promise.all([
+    db.workoutTemplate.findFirst({
+      where: { id: templateId, trainerId: trainer.trainerId },
+      include: { exercises: { orderBy: { sortOrder: "desc" }, take: 1 } },
+    }),
+    db.exercise.findFirst({
+      where: { id: exerciseId, trainerId: trainer.trainerId },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!template) return { ok: false, error: "Trénink nebyl nalezen." };
+  if (!exercise) return { ok: false, error: "Cvik nebyl nalezen." };
+
+  try {
+    const item = await db.workoutTemplateExercise.create({
+      data: {
+        templateId: template.id,
+        exerciseId: exercise.id,
+        sortOrder: (template.exercises[0]?.sortOrder ?? -1) + 1,
+        restSeconds: 90,
+        sets: {
+          create: Array.from({ length: 3 }, (_, index) => ({
+            setNumber: index + 1,
+            reps: 10,
+            targetWeight: null,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+
+    revalidatePath(`/treninky/${template.id}`);
+    return { ok: true, itemId: item.id };
+  } catch (error) {
+    console.error("quickAddTemplateExerciseAction", error);
+    return { ok: false, error: GENERIC_ERROR };
+  }
+}
+
+/**
  * Přepsání parametrů cviku v tréninku.
  * Trenér typicky nepředělává celý trénink — jen posune váhu nebo série.
  */
 export async function updateTemplateExerciseAction(
   itemId: string,
   values: {
+    trackingType: "WEIGHT_REPS" | "TIME";
     restSeconds: number;
     note: string | null;
     sets: { reps: number; targetWeight: number | null }[];
@@ -276,6 +327,7 @@ export async function updateTemplateExerciseAction(
 
   const parsed = z
     .object({
+      trackingType: z.enum(["WEIGHT_REPS", "TIME"]),
       restSeconds: z.number().int().min(0).max(600),
       note: z.string().trim().max(200).nullable(),
       sets: z
@@ -300,7 +352,7 @@ export async function updateTemplateExerciseAction(
 
   const item = await db.workoutTemplateExercise.findFirst({
     where: { id: itemId, template: { trainerId: trainer.trainerId } },
-    select: { id: true, templateId: true },
+    select: { id: true, templateId: true, exerciseId: true },
   });
   if (!item) return { ok: false, error: "Cvik nebyl nalezen." };
 
@@ -308,6 +360,10 @@ export async function updateTemplateExerciseAction(
     // Série přepisujeme celé — je to jednodušší i spolehlivější než
     // dopočítávat, které přibyly, ubyly nebo se změnily.
     await db.$transaction([
+      db.exercise.update({
+        where: { id: item.exerciseId },
+        data: { trackingType: parsed.data.trackingType },
+      }),
       db.workoutTemplateSet.deleteMany({
         where: { templateExerciseId: item.id },
       }),

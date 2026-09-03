@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowDown,
@@ -38,7 +39,13 @@ export type Item = {
   trackingType: string;
 };
 
-export function TemplateExerciseList({ items }: { items: Item[] }) {
+export function TemplateExerciseList({
+  items,
+  autoEditId,
+}: {
+  items: Item[];
+  autoEditId?: string;
+}) {
   if (items.length === 0) {
     return (
       <p className="py-4 text-lg text-muted-foreground">
@@ -56,6 +63,7 @@ export function TemplateExerciseList({ items }: { items: Item[] }) {
           index={index}
           isFirst={index === 0}
           isLast={index === items.length - 1}
+          initiallyEditing={item.id === autoEditId}
         />
       ))}
     </ol>
@@ -64,19 +72,23 @@ export function TemplateExerciseList({ items }: { items: Item[] }) {
 
 /** Rozepsaná série ve formuláři — hodnoty drží jako text kvůli prázdnému poli. */
 type DraftSet = { reps: string; weight: string };
+type TrackingType = "WEIGHT_REPS" | "TIME";
 
 function ExerciseRow({
   item,
   index,
   isFirst,
   isLast,
+  initiallyEditing,
 }: {
   item: Item;
   index: number;
   isFirst: boolean;
   isLast: boolean;
+  initiallyEditing: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initiallyEditing);
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -87,11 +99,15 @@ function ExerciseRow({
     }));
 
   const [draft, setDraft] = useState<DraftSet[]>(toDraft);
+  const [trackingType, setTrackingType] = useState<TrackingType>(
+    item.trackingType === "TIME" ? "TIME" : "WEIGHT_REPS",
+  );
   const [rest, setRest] = useState(String(item.restSeconds));
   const [note, setNote] = useState(item.note ?? "");
 
   const cancel = () => {
     setDraft(toDraft());
+    setTrackingType(item.trackingType === "TIME" ? "TIME" : "WEIGHT_REPS");
     setRest(String(item.restSeconds));
     setNote(item.note ?? "");
     setError(null);
@@ -102,11 +118,15 @@ function ExerciseRow({
     setError(null);
     startTransition(async () => {
       const result = await updateTemplateExerciseAction(item.id, {
+        trackingType,
         restSeconds: Number(rest),
         note: note.trim() === "" ? null : note.trim(),
         sets: draft.map((s) => ({
           reps: Number(s.reps),
-          targetWeight: s.weight === "" ? null : Number(s.weight),
+          targetWeight:
+            trackingType === "TIME" || s.weight === ""
+              ? null
+              : parseDecimal(s.weight),
         })),
       });
 
@@ -129,60 +149,80 @@ function ExerciseRow({
     setDraft((prev) => prev.filter((_, idx) => idx !== i));
 
   return (
-    <li className="rounded-[var(--radius-button)] bg-surface-muted p-4">
-      <div className="flex items-start gap-3">
+    <li className="rounded-[var(--radius-button)] bg-surface-muted p-3">
+      <div className="flex items-start gap-2">
         <span
           aria-hidden="true"
-          className="tabular mt-0.5 text-xl font-bold text-muted-foreground"
+          className="tabular mt-0.5 text-lg font-bold text-muted-foreground"
         >
           {index + 1}.
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-bold">{item.name}</p>
+          <p className="text-lg font-bold">{item.name}</p>
           <ExerciseImageUpload exerciseId={item.exerciseId} imageUrl={item.imageUrl} />
 
           {editing ? (
-            <div className="mt-3 flex flex-col gap-3">
-              <p className="text-base font-semibold">Série</p>
+            <div className="mt-2 flex flex-col gap-2">
+              <div className="-ml-6 flex w-[calc(100%+1.5rem)] items-center justify-between gap-3">
+                <p className="text-sm font-semibold">Série se počítají na</p>
+                <div className="grid grid-cols-2 rounded-lg bg-surface p-1 shadow-sm" role="group" aria-label="Způsob měření cviku">
+                  <button
+                    type="button"
+                    aria-pressed={trackingType === "WEIGHT_REPS"}
+                    className={`h-8 rounded-md px-3 text-sm font-bold transition-colors ${trackingType === "WEIGHT_REPS" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    onClick={() => setTrackingType("WEIGHT_REPS")}
+                  >
+                    Váha
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={trackingType === "TIME"}
+                    className={`h-8 rounded-md px-3 text-sm font-bold transition-colors ${trackingType === "TIME" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    onClick={() => setTrackingType("TIME")}
+                  >
+                    Čas
+                  </button>
+                </div>
+              </div>
 
-              <ul className="-ml-7 flex w-[calc(100%+1.75rem)] flex-col gap-2">
+              <ul className="-ml-6 flex w-[calc(100%+1.5rem)] flex-col gap-1.5">
                 {draft.map((set, i) => (
                   <li
                     key={i}
-                    className="rounded-[10px] bg-surface p-3"
+                    className="rounded-[10px] bg-surface p-2"
                   >
-                    <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="mb-1 flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-muted-foreground">
                         Série {i + 1}
                       </span>
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        className="h-8 min-h-0 gap-1 px-2 text-sm [&_svg]:size-4"
+                        aria-label={`Odebrat sérii ${i + 1}`}
+                        title="Odebrat sérii"
+                        className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-danger/10 hover:text-danger disabled:opacity-30"
                         disabled={draft.length <= 1}
                         onClick={() => removeSet(i)}
                       >
-                        <Trash2 aria-hidden="true" />
-                        Odebrat
-                      </Button>
+                        <Trash2 aria-hidden="true" className="size-4" />
+                      </button>
                     </div>
 
-                    <div className={item.trackingType === "TIME" ? "grid gap-2" : "grid grid-cols-2 gap-2"}>
+                    <div className={trackingType === "TIME" ? "grid" : "grid grid-cols-2 gap-2"}>
                       <label>
                         <span className="mb-1 block text-sm font-semibold">
-                          {item.trackingType === "TIME" ? "Výdrž (sekundy)" : "Opakování"}
+                          {trackingType === "TIME" ? "Čas (s)" : "Opakování"}
                         </span>
                         <Input
-                          type="number"
+                          type="text"
                           inputMode="numeric"
                           min={1}
-                          max={item.trackingType === "TIME" ? 3600 : 100}
+                          max={trackingType === "TIME" ? 3600 : 100}
                           value={set.reps}
-                          className="h-10 min-h-0 px-3 text-sm"
+                          className="h-9 min-h-0 px-3 text-sm"
                           onChange={(e) => updateSet(i, { reps: e.target.value })}
                         />
                       </label>
-                      {item.trackingType !== "TIME" && <label>
+                      {trackingType !== "TIME" && <label>
                         <span className="mb-1 block text-sm font-semibold">
                           Váha (kg)
                         </span>
@@ -194,7 +234,7 @@ function ExerciseRow({
                           step={2.5}
                           value={set.weight}
                           placeholder="vlastní váha"
-                          className="h-10 min-h-0 px-3 text-sm"
+                          className="h-9 min-h-0 px-3 text-sm"
                           onChange={(e) => updateSet(i, { weight: e.target.value })}
                         />
                       </label>}
@@ -203,12 +243,12 @@ function ExerciseRow({
                 ))}
               </ul>
 
-              <Button className="-ml-7 h-10 min-h-0 w-[calc(100%+1.75rem)] text-sm" type="button" variant="secondary" block onClick={addSet}>
+              <Button className="-ml-6 h-9 min-h-0 w-[calc(100%+1.5rem)] text-sm" type="button" variant="secondary" block onClick={addSet}>
                 <Plus aria-hidden="true" />
                 Přidat sérii
               </Button>
 
-              <div className="-ml-7 grid w-[calc(100%+1.75rem)] grid-cols-2 gap-2">
+              <div className="-ml-6 grid w-[calc(100%+1.5rem)] grid-cols-2 gap-2">
                 <label>
                   <span className="mb-1 block text-sm font-semibold">
                     Pauza (s)
@@ -220,7 +260,7 @@ function ExerciseRow({
                     max={600}
                     step={15}
                     value={rest}
-                    className="h-10 min-h-0 px-3 text-sm"
+                    className="h-9 min-h-0 px-3 text-sm"
                     onChange={(e) => setRest(e.target.value)}
                   />
                 </label>
@@ -231,7 +271,7 @@ function ExerciseRow({
                   <Input
                     value={note}
                     placeholder="Nepovinné."
-                    className="h-10 min-h-0 px-3 text-sm"
+                    className="h-9 min-h-0 px-3 text-sm"
                     onChange={(e) => setNote(e.target.value)}
                   />
                 </label>
@@ -247,15 +287,15 @@ function ExerciseRow({
                 </p>
               )}
 
-              <div className="-ml-7 flex w-[calc(100%+1.75rem)] gap-2">
-                <Button className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4" type="button" onClick={save} disabled={pending}>
+              <div className="-ml-6 flex w-[calc(100%+1.5rem)] gap-2">
+                <Button className="h-9 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4" type="button" onClick={save} disabled={pending}>
                   <Check aria-hidden="true" />
                   {pending ? "Ukládám…" : "Uložit změny"}
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
-                  className="h-10 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4"
+                  className="h-9 min-h-0 gap-1.5 px-3 text-sm [&_svg]:size-4"
                   onClick={cancel}
                   disabled={pending}
                 >
@@ -335,7 +375,10 @@ function ExerciseRow({
             disabled={pending}
             onClick={() => {
               if (confirm(`Opravdu odebrat cvik ${item.name} z tohoto tréninku?`)) {
-                startTransition(() => removeTemplateExerciseAction(item.id));
+                startTransition(async () => {
+                  await removeTemplateExerciseAction(item.id);
+                  router.refresh();
+                });
               }
             }}
           >
@@ -346,4 +389,8 @@ function ExerciseRow({
       )}
     </li>
   );
+}
+
+function parseDecimal(value: string): number {
+  return Number(value.replace(",", "."));
 }

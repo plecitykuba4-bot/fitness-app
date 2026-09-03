@@ -1,27 +1,15 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, AlertCircle } from "lucide-react";
 import {
-  addTemplateExerciseAction,
-  type FormState,
+  quickAddTemplateExerciseAction,
 } from "@/server/actions/template";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Field } from "@/components/shared/field";
 import { SearchableSelect } from "@/components/shared/searchable-select";
-
-function Submit() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" block disabled={pending}>
-      <Plus aria-hidden="true" />
-      {pending ? "Přidávám…" : "Přidat cvik do tréninku"}
-    </Button>
-  );
-}
 
 export function AddExerciseForm({
   templateId,
@@ -32,32 +20,39 @@ export function AddExerciseForm({
 }) {
   const categories = [...new Set(exercises.map((exercise) => exercise.category))];
   const [selectedExerciseId, setSelectedExerciseId] = useState("");
-  const isTimed =
-    exercises.find((exercise) => exercise.id === selectedExerciseId)
-      ?.trackingType === "TIME";
-  const formRef = useRef<HTMLFormElement>(null);
-  const [state, action] = useActionState(
-    async (prev: FormState, formData: FormData) => {
-      const result = await addTemplateExerciseAction(prev, formData);
-      // Po úspěchu vyprázdni formulář, ať jde rovnou přidat další cvik.
-      if (!result.error && !result.fieldErrors) formRef.current?.reset();
-      return result;
-    },
-    {} as FormState,
-  );
+  const [selectResetKey, setSelectResetKey] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const selectedExercise = exercises.find((exercise) => exercise.id === selectedExerciseId);
+
+  const addExercise = () => {
+    if (!selectedExerciseId) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await quickAddTemplateExerciseAction(templateId, selectedExerciseId);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setSelectedExerciseId("");
+      setSelectResetKey((key) => key + 1);
+      router.replace(`/treninky/${templateId}?edit=${result.itemId}#cviky`, { scroll: false });
+      router.refresh();
+    });
+  };
 
   return (
-    <form ref={formRef} action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="templateId" value={templateId} />
-
-      {state.error && (
+    <div className="flex flex-col gap-4">
+      {error && (
         <p role="alert" className="flex items-start gap-3 rounded-[var(--radius-button)] bg-danger px-4 py-3 text-lg font-semibold text-danger-foreground">
           <AlertCircle aria-hidden="true" className="mt-0.5 size-6 shrink-0" />
-          {state.error}
+          {error}
         </p>
       )}
 
-      <Field id="exerciseId" label="Cvik" error={state.fieldErrors?.exerciseId}>
+      <Field id="exerciseId" label="Vyberte cvik">
         <div className="flex flex-col gap-3">
           <SearchableSelect
             id="exerciseId"
@@ -66,6 +61,7 @@ export function AddExerciseForm({
             emptyLabel="Žádný cvik neodpovídá"
             categories={categories}
             onValueChange={setSelectedExerciseId}
+            resetKey={selectResetKey}
             options={exercises.map((exercise) => ({
               value: exercise.id,
               label: exercise.name,
@@ -85,45 +81,16 @@ export function AddExerciseForm({
         </div>
       </Field>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field id="sets" label="Počet sérií" error={state.fieldErrors?.sets}>
-          <Input id="sets" name="sets" type="number" inputMode="numeric" min={1} max={20} defaultValue={3} required />
-        </Field>
-        <Field
-          id="reps"
-          label={isTimed ? "Výdrž (sekundy)" : "Počet opakování"}
-          error={state.fieldErrors?.reps}
-        >
-          <Input
-            key={isTimed ? "time" : "reps"}
-            id="reps"
-            name="reps"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={isTimed ? 3600 : 100}
-            step={isTimed ? 5 : 1}
-            defaultValue={isTimed ? 90 : 10}
-            required
-          />
-        </Field>
-        {isTimed ? (
-          <input type="hidden" name="targetWeight" value="" />
-        ) : (
-          <Field id="targetWeight" label="Cílová váha (kg)" hint="Nepovinné.">
-            <Input id="targetWeight" name="targetWeight" type="number" inputMode="decimal" step={2.5} min={0} max={500} placeholder="80" />
-          </Field>
-        )}
-        <Field id="restSeconds" label="Pauza (sekundy)">
-          <Input id="restSeconds" name="restSeconds" type="number" inputMode="numeric" min={0} max={600} step={15} defaultValue={90} required />
-        </Field>
-      </div>
+      {selectedExercise && (
+        <p className="rounded-lg bg-surface-muted px-3 py-2 text-sm text-muted-foreground">
+          Po vložení nastavíte série, {selectedExercise.trackingType === "TIME" ? "čas" : "váhu a opakování"} i pauzu přímo u cviku.
+        </p>
+      )}
 
-      <Field id="note" label="Poznámka ke cviku" hint="Nepovinné. Klient ji uvidí při tréninku.">
-        <Input id="note" name="note" placeholder="Poslední série do selhání." />
-      </Field>
-
-      <Submit />
-    </form>
+      <Button type="button" size="lg" block disabled={!selectedExerciseId || pending} onClick={addExercise}>
+        <Plus aria-hidden="true" />
+        {pending ? "Vkládám…" : "Vložit cvik a upravit"}
+      </Button>
+    </div>
   );
 }
