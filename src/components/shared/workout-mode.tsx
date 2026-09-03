@@ -406,7 +406,7 @@ export function WorkoutMode({
               })()}
 
               {/* Hlavička tabulky — jednou na cvik. */}
-              <div className="mt-3 grid grid-cols-[2rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_2.35rem] items-center gap-1.5 px-1 text-xs font-semibold text-muted-foreground">
+              <div className="mt-3 grid grid-cols-[3.4rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-1 px-1 text-xs font-semibold text-muted-foreground">
                 <span>Série</span>
                 <span>Minule</span>
                 <span>{activeExercise.trackingType === "TIME" ? "Čas" : "Váha (kg)"}</span>
@@ -542,25 +542,39 @@ function SetRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[2rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_2.35rem] items-center gap-1.5 rounded-[10px] border px-1 py-1 transition-colors",
+        "grid grid-cols-[3.4rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-1 rounded-[10px] border px-1 py-1 transition-colors",
         done
           ? "border-primary/60 bg-primary/20 shadow-[inset_3px_0_0_rgb(174_240_0)]"
           : "border-transparent bg-transparent",
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "flex h-7 w-8 items-center justify-center rounded-[8px] text-sm font-bold",
-          done
-            ? "border border-primary bg-transparent text-primary-strong"
-            : "bg-primary text-primary-foreground",
+      <div className="flex items-center justify-start gap-1">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex h-7 w-8 items-center justify-center rounded-[8px] text-sm font-bold",
+            done
+              ? "border border-primary bg-transparent text-primary-strong"
+              : "bg-primary text-primary-foreground",
+          )}
+        >
+          {setNumber}
+        </span>
+        {canRemove && !done && (
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={disabled}
+            aria-label={`Odebrat sérii ${setNumber}`}
+            className="flex size-5 items-center justify-center rounded-[6px] border border-border bg-surface text-muted-foreground transition-colors hover:border-danger hover:text-danger focus:border-danger focus:text-danger"
+          >
+            <Trash2 aria-hidden="true" className="size-3.5" />
+            <span className="sr-only">Odebrat sérii</span>
+          </button>
         )}
-      >
-        {setNumber}
-      </span>
+      </div>
 
-      <p className="tabular flex min-h-9 min-w-0 items-center justify-center rounded-[8px] bg-surface-muted px-1 text-center text-xs font-semibold text-muted-foreground">
+      <p className="tabular flex min-h-8 min-w-0 items-center justify-center rounded-[8px] bg-surface-muted px-1 text-center text-sm font-normal text-muted-foreground">
         {previous
           ? isTimed
             ? `${previous.reps} s`
@@ -597,7 +611,7 @@ function SetRow({
         <>
           <label
             className={cn(
-            "flex min-h-9 min-w-0 items-center justify-center rounded-[8px] border-2 bg-surface-muted px-1.5 focus-within:border-primary",
+            "flex min-h-8 min-w-0 items-center justify-center rounded-[8px] border-2 bg-surface-muted px-1 focus-within:border-primary",
               done ? "border-transparent" : "border-transparent",
             )}
           >
@@ -613,9 +627,9 @@ function SetRow({
               onBlur={commitWeight}
               onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
               aria-label={`Série ${setNumber} — váha v kg`}
-              className="tabular min-w-0 flex-1 bg-transparent text-right text-base font-bold text-foreground focus:outline-none"
+              className="tabular min-w-0 flex-1 bg-transparent text-right text-sm font-bold text-foreground focus:outline-none"
             />
-            <span aria-hidden="true" className="ml-1 shrink-0 text-lg font-bold text-foreground">kg</span>
+            <span aria-hidden="true" className="ml-0.5 shrink-0 text-sm font-bold text-foreground">kg</span>
           </label>
 
           <input
@@ -631,14 +645,14 @@ function SetRow({
             onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
             aria-label={`Série ${setNumber} — počet opakování`}
             className={cn(
-              "tabular min-h-9 w-full rounded-[8px] border-2 px-1 text-center text-base font-bold focus:border-primary focus:outline-none",
+              "tabular min-h-8 w-full rounded-[8px] border-2 px-1 text-center text-sm font-bold focus:border-primary focus:outline-none",
               done ? "border-transparent bg-surface-muted" : "border-transparent bg-surface-muted",
             )}
           />
         </>
       )}
 
-      <div className="flex flex-col items-center justify-center gap-0.5 py-0.5">
+      <div className="flex items-center justify-center py-0.5">
         <button
           type="button"
           onClick={done ? onUndo : onComplete}
@@ -658,18 +672,6 @@ function SetRow({
             )}
           />
         </button>
-        {canRemove && !done && (
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={disabled}
-            aria-label={`Odebrat sérii ${setNumber}`}
-            className="flex size-5 items-center justify-center rounded-[6px] border border-border bg-surface text-muted-foreground transition-colors hover:border-danger hover:text-danger focus:border-danger focus:text-danger"
-          >
-            <Trash2 aria-hidden="true" className="size-3.5" />
-            <span className="sr-only">Odebrat sérii</span>
-          </button>
-        )}
       </div>
     </div>
   );
