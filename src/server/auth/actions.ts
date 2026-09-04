@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/server/db";
 import {
@@ -8,6 +9,12 @@ import {
   destroySession,
   verifyPassword,
 } from "@/server/auth/session";
+import {
+  clearLoginFailures,
+  loginAllowed,
+  pruneLoginAttempts,
+  recordFailedLogin,
+} from "@/server/auth/login-rate-limit";
 
 /** Validace probíhá na serveru — klientská validace je jen pohodlí, ne ochrana. */
 const LoginSchema = z.object({
@@ -43,8 +50,20 @@ export async function loginAction(
     };
   }
 
+  const requestHeaders = await headers();
+  const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = forwardedFor || requestHeaders.get("x-real-ip") || "unknown";
+  const email = parsed.data.email.toLowerCase();
+  // Chráníme zvlášť zdrojovou IP i konkrétní účet, aby nešlo limit snadno
+  // obejít střídáním adres nebo naopak zahltit jeden účet.
+  const limitKeys = [`ip:${ip}`, `account:${email}`];
+  pruneLoginAttempts();
+  if (!loginAllowed(limitKeys)) {
+    return { error: "Příliš mnoho pokusů o přihlášení. Zkuste to znovu za 15 minut." };
+  }
+
   const user = await db.user.findUnique({
-    where: { email: parsed.data.email.toLowerCase() },
+    where: { email },
   });
 
   // Stejná hláška pro neexistující e-mail i špatné heslo — jinak by šlo
@@ -54,14 +73,21 @@ export async function loginAction(
   if (!user) {
     // Porovnání i tak provedeme, aby odpověď netrvala nápadně kratší dobu.
     await verifyPassword(parsed.data.password, "$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin");
+    recordFailedLogin(limitKeys);
     return { error: genericError };
   }
 
   const ok = await verifyPassword(parsed.data.password, user.passwordHash);
-  if (!ok) return { error: genericError };
+  if (!ok) {
+    recordFailedLogin(limitKeys);
+    return { error: genericError };
+  }
 
+  clearLoginFailures(limitKeys);
   await createSession(user.id);
-  redirect(user.role === "TRAINER" ? "/prehled" : "/");
+  redirect(
+    user.role === "ADMIN" ? "/sprava" : user.role === "TRAINER" ? "/prehled" : "/",
+  );
 }
 
 export async function logoutAction(): Promise<void> {

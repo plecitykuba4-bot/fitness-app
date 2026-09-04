@@ -4,6 +4,7 @@ import { getSessionUser } from "@/server/auth/session";
 export default async function HomePage() {
   const user = await getSessionUser();
   if (!user) redirect("/prihlaseni");
+  if (user.role === "ADMIN") redirect("/sprava");
   if (user.role === "TRAINER") redirect("/prehled");
   redirect("/dnes");
 }

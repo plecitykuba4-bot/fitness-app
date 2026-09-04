@@ -6,7 +6,8 @@ import { z } from "zod";
  * kde hodnota vstupuje do aplikace nebo se z databáze čte.
  */
 
-export const RoleSchema = z.enum(["TRAINER", "CLIENT"]);
+/** Role jsou oddělené na úrovni každého serverového požadavku. */
+export const RoleSchema = z.enum(["ADMIN", "TRAINER", "CLIENT"]);
 export type Role = z.infer<typeof RoleSchema>;
 
 export const ClientStatusSchema = z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]);

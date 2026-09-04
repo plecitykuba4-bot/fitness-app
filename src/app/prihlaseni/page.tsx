@@ -8,7 +8,9 @@ export const metadata = { title: "Přihlášení — Fitness trenér" };
 
 export default async function LoginPage() {
   const user = await getSessionUser();
-  if (user) redirect(user.role === "TRAINER" ? "/prehled" : "/");
+  if (user) {
+    redirect(user.role === "ADMIN" ? "/sprava" : user.role === "TRAINER" ? "/prehled" : "/");
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-10">

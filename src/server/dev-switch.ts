@@ -11,7 +11,9 @@ import { db } from "@/server/db";
  */
 
 export function isDevSwitchEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.DEMO_MODE === "true";
+  // Nikdy nezapínej přes proměnnou prostředí v nasazené aplikaci. Tohle je
+  // schválně dostupné jen při `next dev` na vývojářském počítači.
+  return process.env.NODE_ENV === "development";
 }
 
 export type DevUser = {

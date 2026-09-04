@@ -18,6 +18,7 @@ import { getSessionUser, type SessionUser } from "@/server/auth/session";
 
 export type TrainerSession = SessionUser & { trainerId: string };
 export type ClientSession = SessionUser & { clientId: string };
+export type AdminSession = SessionUser & { role: "ADMIN" };
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
@@ -35,6 +36,13 @@ export async function requireClient(): Promise<ClientSession> {
   const user = await requireUser();
   if (user.role !== "CLIENT" || !user.clientId) redirect("/");
   return user as ClientSession;
+}
+
+/** Administrace není odvozena z URL ani skrytí položky menu, ale z role v DB. */
+export async function requireAdmin(): Promise<AdminSession> {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") redirect("/");
+  return user as AdminSession;
 }
 
 /**

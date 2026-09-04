@@ -16,6 +16,7 @@
     "deploy:vps-web": "node scripts/deploy-vps-web.mjs",
     "db:sync-exercises": "node --experimental-strip-types scripts/sync-exercise-library.mts",
     "db:studio": "prisma studio",
+    "admin:create": "tsx scripts/create-admin.mts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

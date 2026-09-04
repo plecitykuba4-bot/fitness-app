@@ -20,7 +20,7 @@ model User {
   email        String   @unique
   passwordHash String
   name         String
-  role         String // Role: TRAINER | CLIENT
+  role         String // Role: ADMIN | TRAINER | CLIENT
   avatarKey    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
