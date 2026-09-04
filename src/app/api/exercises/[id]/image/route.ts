@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -94,4 +94,28 @@ export async function POST(
   });
 
   return Response.json({ ok: true, storageKey });
+}
+
+/** Odstraní jednu konkrétní položku z galerie cviku. */
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  const user = await getSessionUser();
+  if (!user?.trainerId) return Response.json({ error: "Nepřihlášený trenér." }, { status: 401 });
+
+  const { id: exerciseId } = await context.params;
+  const mediaId = new URL(request.url).searchParams.get("mediaId");
+  if (!mediaId) return Response.json({ error: "Chybí položka galerie." }, { status: 400 });
+  const media = await db.exerciseMedia.findFirst({
+    where: { id: mediaId, exerciseId, exercise: { trainerId: user.trainerId } },
+    select: { id: true, storageKey: true },
+  });
+  if (!media) return Response.json({ error: "Soubor nebyl nalezen." }, { status: 404 });
+
+  await db.exerciseMedia.delete({ where: { id: media.id } });
+  const prefix = "/uploads/exercises/";
+  if (media.storageKey.startsWith(prefix)) {
+    const filename = path.basename(media.storageKey);
+    await rm(path.join(process.cwd(), "public", "uploads", "exercises", filename), { force: true }).catch(() => undefined);
+    await rm(path.join(process.cwd(), "uploads", "exercises", filename), { force: true }).catch(() => undefined);
+  }
+  return Response.json({ ok: true });
 }

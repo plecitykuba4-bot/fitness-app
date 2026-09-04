@@ -77,8 +77,11 @@ export default async function TemplateDetailPage({
               id: item.id,
               exerciseId: item.exerciseId,
               name: item.exercise.name,
-              imageUrl: item.exercise.media.find((media) => media.kind === "IMAGE")?.storageKey,
-              videoUrl: item.exercise.media.find((media) => media.kind === "VIDEO")?.storageKey,
+              media: item.exercise.media.map((media) => ({
+                id: media.id,
+                kind: media.kind,
+                storageKey: media.storageKey,
+              })),
               restSeconds: item.restSeconds,
               note: item.note,
               sets: item.sets.map((set) => ({

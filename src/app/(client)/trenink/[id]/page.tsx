@@ -64,6 +64,7 @@ export default async function WorkoutPage({
       restSeconds: we.restSeconds,
       note: we.note,
       media: we.exercise.media.map((m) => ({
+        id: m.id,
         kind: m.kind,
         storageKey: m.storageKey,
         posterKey: m.posterKey,

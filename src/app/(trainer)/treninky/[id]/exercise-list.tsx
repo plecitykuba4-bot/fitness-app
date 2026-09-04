@@ -32,8 +32,7 @@ export type Item = {
   id: string;
   exerciseId: string;
   name: string;
-  imageUrl?: string;
-  videoUrl?: string;
+  media: { id: string; kind: string; storageKey: string }[];
   restSeconds: number;
   note: string | null;
   sets: SetItem[];
@@ -160,7 +159,7 @@ function ExerciseRow({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-lg font-bold">{item.name}</p>
-          <ExerciseImageUpload exerciseId={item.exerciseId} imageUrl={item.imageUrl} videoUrl={item.videoUrl} />
+          <ExerciseImageUpload exerciseId={item.exerciseId} media={item.media} />
 
           {editing ? (
             <div className="mt-2 flex flex-col gap-2">

@@ -41,7 +41,7 @@ export type WorkoutExerciseView = {
   instructions: string | null;
   restSeconds: number;
   note: string | null;
-  media: { kind: string; storageKey: string; posterKey: string | null }[];
+  media: { id: string; kind: string; storageKey: string; posterKey: string | null }[];
   /** Předpis sérií — každá může mít jinou váhu i opakování (pyramida). */
   targets: TargetView[];
   /** Série už zapsané v databázi (např. po reloadu stránky). */
@@ -378,7 +378,7 @@ export function WorkoutMode({
                         <div key={m.storageKey} className="mt-4">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={m.storageKey}
+                            src={mediaSrc(m)}
                             alt={`Fotka cviku ${activeExercise.name}`}
                             loading="lazy"
                             className="w-full rounded-[var(--radius-button)]"
@@ -388,8 +388,8 @@ export function WorkoutMode({
                       {videos.map((m) => (
                         <video
                           key={m.storageKey}
-                          src={m.storageKey}
-                          poster={m.posterKey ?? undefined}
+                          src={mediaSrc(m)}
+                          poster={m.posterKey ? mediaSrc({ id: m.id, storageKey: m.posterKey }) : undefined}
                           controls
                           playsInline
                           preload="metadata"
@@ -759,4 +759,10 @@ function initialDoneKeys(exercises: WorkoutExerciseView[]): string[] {
     for (const s of ex.loggedSets) keys.push(`${ex.id}:${s.setNumber}`);
   }
   return keys;
+}
+
+function mediaSrc(media: { id: string; storageKey: string }) {
+  return media.storageKey.startsWith("/uploads/")
+    ? `/api/exercise-media/${media.id}`
+    : media.storageKey;
 }
