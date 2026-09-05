@@ -1,7 +1,9 @@
-import { ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ShieldCheck, Users } from "lucide-react";
 import { requireAdmin } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { TrainerForm } from "./trainer-form";
 
 export const metadata = { title: "Správa aplikace — Fitness trenér" };
@@ -14,9 +16,12 @@ export default async function AdminPage() {
   });
   return (
     <div className="space-y-6">
-      <header className="flex items-start gap-3">
+      <header className="flex items-start justify-between gap-3">
         <ShieldCheck aria-hidden="true" className="mt-1 size-8 text-primary-strong" />
         <div><h1 className="text-3xl font-bold tracking-tight">Správa aplikace</h1><p className="text-muted-foreground">Přihlášen jako {admin.name}. Tento prostor není v menu trenérů ani klientů.</p></div>
+        <Button asChild variant="secondary" className="shrink-0">
+          <Link href="/dnes"><ArrowLeft aria-hidden="true" /> Moje aplikace</Link>
+        </Button>
       </header>
       <Card>
         <CardHeader><CardTitle className="text-xl">Nový trenér</CardTitle><CardDescription>Trenér pak vytváří a spravuje jen své klienty. Dočasné heslo mu předejte bezpečným kanálem.</CardDescription></CardHeader>
