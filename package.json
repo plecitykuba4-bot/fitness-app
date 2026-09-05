@@ -17,6 +17,8 @@
     "db:sync-exercises": "node --experimental-strip-types scripts/sync-exercise-library.mts",
     "db:studio": "prisma studio",
     "admin:create": "tsx scripts/create-admin.mts",
+    "backup:run": "node scripts/backup-postgres.mjs",
+    "backup:install": "node scripts/install-vps-backup.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

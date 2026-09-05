@@ -28,6 +28,7 @@ model User {
   trainer       Trainer?
   client        Client?
   sessions      Session[]
+  passwordResetTokens PasswordResetToken[]
   notifications Notification[]
   authoredNotes Note[]         @relation("NoteAuthor")
 
@@ -37,6 +38,20 @@ model User {
 model Session {
   id        String   @id @default(cuid())
   userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/** Jednorázový, hashovaný token pro bezpečné nastavení nového hesla. */
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
 

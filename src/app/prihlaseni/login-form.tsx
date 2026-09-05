@@ -7,6 +7,7 @@ import { loginAction, type LoginState } from "@/server/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Link from "next/link";
 
 const initialState: LoginState = {};
 
@@ -77,6 +78,7 @@ export function LoginForm() {
             {state.fieldErrors.password}
           </p>
         )}
+        <Link href="/zapomenute-heslo" className="mt-2 inline-block text-sm font-semibold text-primary-strong">Zapomenuté heslo?</Link>
       </div>
 
       <SubmitButton />
