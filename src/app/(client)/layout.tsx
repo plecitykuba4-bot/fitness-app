@@ -1,12 +1,11 @@
-import { Home, Dumbbell, BarChart3, CreditCard, User } from "lucide-react";
+import { Home, Dumbbell, BarChart3, CreditCard, User, ShieldCheck } from "lucide-react";
 import { requireClient } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { AppNav } from "@/components/shared/app-nav";
 import { AppHeader } from "@/components/shared/app-header";
 
-// Klient má záměrně jen pět položek. Nic dalšího sem nepřidávej —
-// každá další volba zvyšuje riziko, že se uživatel ztratí. Žádný pevný
-// rozvrh — klient si vybírá trénink volně na Domů.
+// Klient má pět položek. Pouze admin s vlastním klientským profilem dostane
+// šestou položku Správa; běžný klient ji nikdy nevidí.
 const NAV = [
   { href: "/dnes", label: "Domů", icon: <Home /> },
   { href: "/trenink", label: "Trénink", icon: <Dumbbell /> },
@@ -28,7 +27,9 @@ export default async function ClientLayout({
 
   return (
     <div className="min-h-dvh md:pl-64">
-      <AppNav items={NAV} />
+      <AppNav
+        items={client.role === "ADMIN" ? [...NAV, { href: "/sprava", label: "Správa", icon: <ShieldCheck /> }] : NAV}
+      />
       <AppHeader
         name={client.name}
         profileHref="/profil"

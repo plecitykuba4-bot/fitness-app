@@ -22,10 +22,20 @@ if (existing && existing.role !== "ADMIN") {
 }
 
 const passwordHash = await bcrypt.hash(password, 12);
-await db.user.upsert({
+const admin = await db.user.upsert({
   where: { email },
   create: { email, name, passwordHash, role: "ADMIN" },
   update: { name, passwordHash, role: "ADMIN" },
 });
+const trainer = await db.trainer.upsert({
+  where: { userId: admin.id },
+  create: { userId: admin.id },
+  update: {},
+});
+await db.client.upsert({
+  where: { userId: admin.id },
+  create: { userId: admin.id, trainerId: trainer.id },
+  update: {},
+});
 await db.$disconnect();
-console.log(`Admin účet ${email} je připraven. Přihlaste se standardně přes /prihlaseni.`);
+console.log(`Admin účet ${email} je připraven včetně vlastního klientského profilu.`);

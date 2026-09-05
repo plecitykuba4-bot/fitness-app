@@ -9,7 +9,7 @@ export const metadata = { title: "Přihlášení — Fitness trenér" };
 export default async function LoginPage() {
   const user = await getSessionUser();
   if (user) {
-    redirect(user.role === "ADMIN" ? "/sprava" : user.role === "TRAINER" ? "/prehled" : "/");
+    redirect(user.role === "ADMIN" ? "/dnes" : user.role === "TRAINER" ? "/prehled" : "/");
   }
 
   return (

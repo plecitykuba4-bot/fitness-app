@@ -28,5 +28,5 @@ export async function devSwitchUserAction(userId: string): Promise<void> {
   await destroySession();
   await createSession(user.id);
 
-  redirect(user.role === "TRAINER" ? "/prehled" : user.role === "ADMIN" ? "/sprava" : "/dnes");
+  redirect(user.role === "TRAINER" ? "/prehled" : "/dnes");
 }

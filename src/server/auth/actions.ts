@@ -86,7 +86,7 @@ export async function loginAction(
   clearLoginFailures(limitKeys);
   await createSession(user.id);
   redirect(
-    user.role === "ADMIN" ? "/sprava" : user.role === "TRAINER" ? "/prehled" : "/",
+    user.role === "ADMIN" ? "/dnes" : user.role === "TRAINER" ? "/prehled" : "/",
   );
 }
 

@@ -34,7 +34,9 @@ export async function requireTrainer(): Promise<TrainerSession> {
 
 export async function requireClient(): Promise<ClientSession> {
   const user = await requireUser();
-  if (user.role !== "CLIENT" || !user.clientId) redirect("/");
+  // Admin může mít vlastní klientský profil pod stejným e-mailem. I v tom
+  // případě obsahuje session jen jeho clientId, takže nevidí cizí data.
+  if ((user.role !== "CLIENT" && user.role !== "ADMIN") || !user.clientId) redirect("/");
   return user as ClientSession;
 }
 
@@ -71,7 +73,7 @@ export async function resolveAccessibleClientId(
 ): Promise<string> {
   const user = await requireUser();
 
-  if (user.role === "CLIENT") {
+  if (user.role === "CLIENT" || user.role === "ADMIN") {
     if (!user.clientId) redirect("/prihlaseni");
     // Klient nesmí načíst nikoho jiného — případný parametr ignorujeme,
     // a pokud cílí na cizí id, končíme 404.
